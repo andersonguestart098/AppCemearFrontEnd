@@ -1,8 +1,7 @@
-// App.tsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Button, IconButton, Modal, Box, Typography } from "@mui/material";
-import { useNavigate } from "react-router-dom"; // Importando useNavigate
-import { useUserContext } from "./components/UserContext"; // Importando o UserContext
+import { useNavigate } from "react-router-dom";
+import { useUserContext } from "./components/UserContext";
 import PostForm from "./components/PostForm";
 import PostList from "./components/PostList";
 import CalendarComponent from "./components/Calendar";
@@ -14,6 +13,7 @@ import DownloadForOfflineIcon from "@mui/icons-material/DownloadForOffline";
 import PostAddIcon from "@mui/icons-material/PostAdd";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import Register from "./components/RegisterUser";
+import NavBar from "./components/NavBar";
 
 const style = {
   position: "absolute" as "absolute",
@@ -35,13 +35,18 @@ const buttonStyle = {
 };
 
 const App: React.FC = () => {
-  const navigate = useNavigate(); // Hook para navegação programática
+  const navigate = useNavigate();
   const [isPostFormOpen, setIsPostFormOpen] = React.useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
   const [isFileUploadOpen, setIsFileUploadOpen] = React.useState(false);
   const [isFileDownloadOpen, setIsFileDownloadOpen] = React.useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = React.useState(false);
-  const { tipoUsuario, setTipoUsuario } = useUserContext(); // Usando o UserContext
+  const [forceUpdate, setForceUpdate] = useState(0); // Forçar atualização
+  const { tipoUsuario, setTipoUsuario } = useUserContext();
+
+  useEffect(() => {
+    console.log("Tipo de usuário atualizado:", tipoUsuario);
+  }, [tipoUsuario]);
 
   const openPostFormModal = () => setIsPostFormOpen(true);
   const closePostFormModal = () => setIsPostFormOpen(false);
@@ -59,6 +64,7 @@ const App: React.FC = () => {
   const closeRegisterModal = () => setIsRegisterOpen(false);
 
   const handleLogout = () => {
+    console.log("Logout chamado");
     localStorage.removeItem("token");
     setTipoUsuario(""); // Limpar o estado do tipo de usuário no contexto
     navigate("/login"); // Redirecionar para a página de login
@@ -66,9 +72,7 @@ const App: React.FC = () => {
 
   return (
     <div style={{ padding: "20px", textAlign: "center" }}>
-      <Typography variant="h1" gutterBottom>
-        Post's
-      </Typography>
+      <NavBar />
 
       <div>
         {/* Renderização condicional baseada no tipo de usuário */}
@@ -102,6 +106,13 @@ const App: React.FC = () => {
             >
               <PersonAddIcon />
             </IconButton>
+            <IconButton
+              style={buttonStyle}
+              color="secondary"
+              onClick={openCalendarModal}
+            >
+              <CalendarTodayIcon />
+            </IconButton>
           </>
         ) : tipoUsuario === "user" ? (
           <IconButton
@@ -120,7 +131,7 @@ const App: React.FC = () => {
       {/* Modals */}
       <Modal open={isPostFormOpen} onClose={closePostFormModal}>
         <Box sx={style}>
-          <Typography variant="h6" component="h2" sx={{ alignItems: "center" }}>
+          <Typography variant="h6" component="h2">
             Adicionar Post:
           </Typography>
           <PostForm closeModal={closePostFormModal} />
@@ -129,9 +140,6 @@ const App: React.FC = () => {
 
       <Modal open={isCalendarOpen} onClose={closeCalendarModal}>
         <Box sx={style}>
-          <Typography variant="h6" component="h2">
-            Calendário
-          </Typography>
           <CalendarComponent />
           <Button
             variant="outlined"
@@ -190,11 +198,6 @@ const App: React.FC = () => {
           </Button>
         </Box>
       </Modal>
-
-      {/* Botão de Logout */}
-      <Button onClick={handleLogout} variant="contained" color="secondary">
-        Logout
-      </Button>
     </div>
   );
 };

@@ -50,7 +50,7 @@ const PostList: React.FC = () => {
   return (
     <Box padding={2}>
       <Typography variant="h6" gutterBottom>
-        Postagens
+        Post's
       </Typography>
       <List>
         {posts.map((post) => (

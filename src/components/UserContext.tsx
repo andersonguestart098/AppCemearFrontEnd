@@ -1,4 +1,3 @@
-// UserContext.tsx
 import React, {
   createContext,
   useContext,
@@ -25,8 +24,15 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     const token = localStorage.getItem("token");
     if (token) {
       // Simulação de decodificação do token. Ajuste conforme necessário.
-      const decodedToken = JSON.parse(atob(token.split(".")[1]));
-      setTipoUsuario(decodedToken.user.tipoUsuario); // Ajuste conforme a estrutura do token
+      try {
+        const decodedToken = JSON.parse(atob(token.split(".")[1]));
+        setTipoUsuario(decodedToken.user.tipoUsuario); // Ajuste conforme a estrutura do token
+      } catch (error) {
+        console.error("Erro ao decodificar o token:", error);
+        setTipoUsuario("");
+      }
+    } else {
+      setTipoUsuario(""); // Caso não haja token
     }
   }, []);
 
