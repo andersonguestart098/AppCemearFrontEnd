@@ -24,9 +24,6 @@ const PostForm: React.FC<PostFormProps> = ({ closeModal }) => {
 
   return (
     <Box padding={2}>
-      <Typography variant="h6" gutterBottom>
-        Formulário de Postagem
-      </Typography>
       <form onSubmit={handleSubmit}>
         <Box marginBottom={2}>
           <TextField

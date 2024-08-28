@@ -1,20 +1,19 @@
+// Routing.tsx
 import React from "react";
-import ReactDOM from "react-dom";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
-import { UserProvider } from "./components/UserContext";
-import Login from "./components/Login";
-import App from "./App";
-import "./index.css";
-import * as serviceWorkerRegistration from "./serviceWorkerRegistration";
+import Login from "./Login";
+import App from "../App";
+import { useUserContext } from "./UserContext";
 
 // Função para verificar se o usuário está autenticado
 const isAuthenticated = (): boolean => {
-  return !!localStorage.getItem("token"); // Ajustado para o nome correto do token
+  const token = localStorage.getItem("token");
+  return !!token;
 };
 
 // Componente para proteger rotas privadas
@@ -22,7 +21,7 @@ const ProtectedRoute: React.FC<{ element: JSX.Element }> = ({ element }) => {
   return isAuthenticated() ? element : <Navigate to="/login" />;
 };
 
-function AppRouting() {
+const Routing: React.FC = () => {
   return (
     <Router>
       <Routes>
@@ -32,16 +31,6 @@ function AppRouting() {
       </Routes>
     </Router>
   );
-}
+};
 
-ReactDOM.render(
-  <React.StrictMode>
-    <UserProvider>
-      <AppRouting />
-    </UserProvider>
-  </React.StrictMode>,
-  document.getElementById("root")
-);
-
-// Registrar o Service Worker
-serviceWorkerRegistration.register();
+export default Routing;

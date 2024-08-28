@@ -50,7 +50,7 @@ const PostList: React.FC = () => {
   return (
     <Box padding={2}>
       <Typography variant="h6" gutterBottom>
-        Mural de Postagens
+        Postagens
       </Typography>
       <List>
         {posts.map((post) => (
