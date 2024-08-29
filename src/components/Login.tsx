@@ -22,28 +22,15 @@ const Login: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log(
-          "Login successful, token and tipoUsuario received:",
-          data.token,
-          data.tipoUsuario
-        );
-
-        // Armazena o token e tipoUsuario no localStorage
         localStorage.setItem("token", data.token);
         localStorage.setItem("tipoUsuario", data.tipoUsuario);
 
-        // Redireciona com base no tipoUsuario
-        if (data.tipoUsuario === "admin") {
-          navigate("/main");
-        } else {
-          navigate("/main");
-        }
+        setUsuario(data.tipoUsuario); // Atualizar o contexto com o tipo de usuário
+        navigate("/main"); // Redirecionar para a página principal
       } else {
-        console.log("Login failed, response status:", response.status);
         setError("Login failed. Please check your credentials.");
       }
     } catch (err) {
-      console.error("An error occurred:", err);
       setError("An error occurred. Please try again.");
     }
   };

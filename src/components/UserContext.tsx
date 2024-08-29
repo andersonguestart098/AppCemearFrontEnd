@@ -1,40 +1,18 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
+import React from "react";
 
 interface UserContextType {
-  tipoUsuario: string;
-  setTipoUsuario: (tipo: string) => void;
+  tipoUsuario: string | null;
+  setTipoUsuario: (tipo: string | null) => void;
 }
 
-const UserContext = createContext<UserContextType | undefined>(undefined);
+const UserContext = React.createContext<UserContextType | undefined>(undefined);
 
 interface UserProviderProps {
-  children: ReactNode;
+  children: React.ReactNode; // Adicione o tipo para children
 }
 
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
-  const [tipoUsuario, setTipoUsuario] = useState<string>("");
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      // Simulação de decodificação do token. Ajuste conforme necessário.
-      try {
-        const decodedToken = JSON.parse(atob(token.split(".")[1]));
-        setTipoUsuario(decodedToken.user.tipoUsuario); // Ajuste conforme a estrutura do token
-      } catch (error) {
-        console.error("Erro ao decodificar o token:", error);
-        setTipoUsuario("");
-      }
-    } else {
-      setTipoUsuario(""); // Caso não haja token
-    }
-  }, []);
+  const [tipoUsuario, setTipoUsuario] = React.useState<string | null>(null);
 
   return (
     <UserContext.Provider value={{ tipoUsuario, setTipoUsuario }}>
@@ -44,8 +22,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 };
 
 export const useUserContext = () => {
-  const context = useContext(UserContext);
-  if (context === undefined) {
+  const context = React.useContext(UserContext);
+  if (!context) {
     throw new Error("useUserContext must be used within a UserProvider");
   }
   return context;

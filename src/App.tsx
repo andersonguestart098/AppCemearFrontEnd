@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { Button, IconButton, Modal, Box, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useUserContext } from "./components/UserContext";
@@ -41,12 +41,20 @@ const App: React.FC = () => {
   const [isFileUploadOpen, setIsFileUploadOpen] = React.useState(false);
   const [isFileDownloadOpen, setIsFileDownloadOpen] = React.useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = React.useState(false);
-  const [forceUpdate, setForceUpdate] = useState(0); // Forçar atualização
   const { tipoUsuario, setTipoUsuario } = useUserContext();
 
   useEffect(() => {
-    console.log("Tipo de usuário atualizado:", tipoUsuario);
-  }, [tipoUsuario]);
+    const storedTipoUsuario = localStorage.getItem("tipoUsuario");
+    if (storedTipoUsuario) {
+      setTipoUsuario(storedTipoUsuario);
+    } else {
+      navigate("/login"); // Redireciona para o login se o usuário não estiver autenticado
+    }
+  }, [navigate, setTipoUsuario]);
+
+  if (!tipoUsuario) {
+    return <div>Carregando...</div>; // Tela de carregamento
+  }
 
   const openPostFormModal = () => setIsPostFormOpen(true);
   const closePostFormModal = () => setIsPostFormOpen(false);
@@ -154,7 +162,7 @@ const App: React.FC = () => {
       <Modal open={isFileUploadOpen} onClose={closeFileUploadModal}>
         <Box sx={style}>
           <Typography variant="h6" component="h2">
-            Upload
+            Upload de Arquivos:
           </Typography>
           <FileUploadComponent />
           <Button
@@ -170,7 +178,7 @@ const App: React.FC = () => {
       <Modal open={isFileDownloadOpen} onClose={closeFileDownloadModal}>
         <Box sx={style}>
           <Typography variant="h6" component="h2">
-            Download
+            Arquivos Disponíveis para Download:
           </Typography>
           <FileDownloadComponent />
           <Button
@@ -185,9 +193,6 @@ const App: React.FC = () => {
 
       <Modal open={isRegisterOpen} onClose={closeRegisterModal}>
         <Box sx={style}>
-          <Typography variant="h6" component="h2">
-            Registrar Novo Usuário
-          </Typography>
           <Register />
           <Button
             variant="outlined"

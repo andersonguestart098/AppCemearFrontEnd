@@ -1,19 +1,49 @@
-// ProtectedRoute.tsx
 import React from "react";
-import { Navigate } from "react-router-dom";
+import ReactDOM from "react-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { UserProvider, useUserContext } from "../components/UserContext";
+import Login from "../components/Login";
+import App from "../App";
+import "./index.css";
+import * as serviceWorkerRegistration from "../serviceWorkerRegistration";
 
-interface ProtectedRouteProps {
-  element: React.ReactElement;
-}
+// Componente para proteger rotas privadas
+const ProtectedRoute: React.FC<{ element: JSX.Element }> = ({ element }) => {
+  const { tipoUsuario } = useUserContext();
+  const isAuthenticated = !!localStorage.getItem("token");
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ element }) => {
-  const token = localStorage.getItem("token");
-
-  if (!token) {
-    return <Navigate to="/login" replace />;
+  if (tipoUsuario === null) {
+    return <div>Loading...</div>; // Ou um spinner de carregamento
   }
 
-  return element;
+  return isAuthenticated ? element : <Navigate to="/login" />;
 };
 
-export default ProtectedRoute;
+function AppRouting() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/main" element={<ProtectedRoute element={<App />} />} />
+        <Route path="/" element={<Navigate to="/login" />} />
+      </Routes>
+    </Router>
+  );
+}
+
+ReactDOM.render(
+  <React.StrictMode>
+    <UserProvider>
+      <AppRouting />
+    </UserProvider>
+  </React.StrictMode>,
+  document.getElementById("root")
+);
+
+// Registrar o Service Worker
+serviceWorkerRegistration.register();

@@ -14,10 +14,10 @@ import * as serviceWorkerRegistration from "./serviceWorkerRegistration";
 
 // Função para verificar se o usuário está autenticado
 const isAuthenticated = (): boolean => {
-  return !!localStorage.getItem("token"); // Ajustado para o nome correto do token
+  return !!localStorage.getItem("token");
 };
 
-// Componente para proteger rotas privadas
+// Componente de proteção de rota
 const ProtectedRoute: React.FC<{ element: JSX.Element }> = ({ element }) => {
   return isAuthenticated() ? element : <Navigate to="/login" />;
 };

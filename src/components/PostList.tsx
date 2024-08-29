@@ -4,7 +4,6 @@ import io from "socket.io-client";
 import {
   List,
   ListItem,
-  ListItemText,
   Card,
   CardContent,
   Typography,
@@ -22,7 +21,8 @@ const PostList: React.FC = () => {
     const fetchPosts = async () => {
       try {
         const response = await axios.get("http://localhost:3001/posts");
-        setPosts(response.data);
+        console.log("Initial Fetch Response Data:", response.data); // Log para verificar a estrutura da resposta
+        setPosts(response.data); // Ajustado para acessar o array diretamente
       } catch (error) {
         console.error("Erro ao buscar postagens", error);
         toast.error("Erro ao buscar postagens");
@@ -34,7 +34,8 @@ const PostList: React.FC = () => {
     socket.on("new-post", async () => {
       try {
         const response = await axios.get("http://localhost:3001/posts");
-        setPosts(response.data);
+        console.log("New Post Fetch Response Data:", response.data); // Log para verificar a estrutura da resposta
+        setPosts(response.data); // Ajustado para acessar o array diretamente
         toast.info("Nova postagem foi adicionada!");
       } catch (error) {
         console.error("Erro ao buscar novas postagens", error);

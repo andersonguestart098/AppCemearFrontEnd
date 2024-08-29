@@ -48,7 +48,7 @@ const RegisterUser: React.FC<RegisterUserProps> = ({ closeModal }) => {
   return (
     <Container maxWidth="sm" style={{ padding: "20px" }}>
       <Typography variant="h4" align="center" gutterBottom>
-        Register User
+        Registrar Novo Usuário
       </Typography>
       <form onSubmit={handleRegister}>
         <Grid container spacing={2}>
