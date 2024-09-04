@@ -44,26 +44,47 @@ export function register() {
 
 function subscribeUserToPush(registration: ServiceWorkerRegistration) {
   const vapidPublicKey =
-    "BF_dDzXcKHG9Jbdyirin5s6L7NNdNT7kQvGyQkuztdvHBQlxspD46dLUFN4NNR9NChqOItG7nIKcK6McZXeY7SE";
+    "BDFt6_CYV5ca61PV7V3_ULiIjsNnikV5wxeU-4fHiFYrAeGlJ6U99C8lWSxz3aPgPe7PClp23wa2rgH25tDhj2Q";
   const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
   registration.pushManager
-    .subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: convertedVapidKey,
-    })
+    .getSubscription()
     .then((subscription) => {
-      console.log("Usuário inscrito para notificações push:", subscription);
+      if (subscription) {
+        // Desinscreva a assinatura existente se a chave for diferente
+        return subscription.unsubscribe().then(() => {
+          console.log("Assinatura existente desinscrita.");
+          return registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: convertedVapidKey,
+          });
+        });
+      } else {
+        // Inscrever o usuário se não houver assinatura existente
+        return registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedVapidKey,
+        });
+      }
+    })
+    .then((newSubscription) => {
+      console.log("Usuário inscrito para notificações push:", newSubscription);
 
-      // Enviar a assinatura para o servidor para ser armazenada
-      fetch("http://localhost:3001/subscribe", {
-        // Alterado para o endpoint correto
+      // Enviar a nova assinatura para o servidor para ser armazenada
+      return fetch("http://localhost:3001/subscribe", {
         method: "POST",
-        body: JSON.stringify(subscription),
+        body: JSON.stringify(newSubscription),
         headers: {
           "Content-Type": "application/json",
         },
       });
+    })
+    .then((response) => {
+      if (response.ok) {
+        console.log("Assinatura salva no servidor.");
+      } else {
+        console.error("Falha ao salvar assinatura no servidor.");
+      }
     })
     .catch((error) => {
       console.error(

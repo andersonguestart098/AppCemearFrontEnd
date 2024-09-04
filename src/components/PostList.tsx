@@ -12,7 +12,7 @@ import {
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const socket = io("http://localhost:3001");
+const socket = io("http://localhost:3001", { path: "/socket.io" });
 
 const PostList: React.FC = () => {
   const [posts, setPosts] = useState<any[]>([]);
