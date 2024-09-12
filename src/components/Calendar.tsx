@@ -33,7 +33,7 @@ const CalendarComponent: React.FC = () => {
       const newEvent = { date: date.toISOString().split("T")[0], descricao };
       try {
         const response = await axios.post(
-          "http://localhost:3001/events",
+          "https://cemear-b549eb196d7c.herokuapp.com/events",
           newEvent
         );
         setEvents([...events, { ...newEvent, id: response.data.id }]);
@@ -83,7 +83,9 @@ const CalendarComponent: React.FC = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const response = await axios.get("http://localhost:3001/events");
+        const response = await axios.get(
+          "https://cemear-b549eb196d7c.herokuapp.com/events"
+        );
         setEvents(response.data);
       } catch (error) {
         console.error("Erro ao carregar eventos:", error);

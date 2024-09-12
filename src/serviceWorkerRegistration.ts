@@ -44,36 +44,39 @@ export function register() {
 
 function subscribeUserToPush(registration: ServiceWorkerRegistration) {
   const vapidPublicKey =
-    "BDFt6_CYV5ca61PV7V3_ULiIjsNnikV5wxeU-4fHiFYrAeGlJ6U99C8lWSxz3aPgPe7PClp23wa2rgH25tDhj2Q";
+    "BDFt6_CYV5ca61PV7V3_ULiIjsNnikV5wxeU-4fHiFYrAeGlJ6U99C8lWSxz3aPgPe7PClp23wa2rgH25tDhj2Q"; // Substitua pela sua chave pública VAPID
   const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
   registration.pushManager
-    .getSubscription()
-    .then((subscription) => {
-      if (subscription) {
-        // Desinscreva a assinatura existente se a chave for diferente
-        return subscription.unsubscribe().then(() => {
-          console.log("Assinatura existente desinscrita.");
-          return registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: convertedVapidKey,
-          });
-        });
-      } else {
-        // Inscrever o usuário se não houver assinatura existente
-        return registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: convertedVapidKey,
-        });
-      }
+    .subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: convertedVapidKey,
     })
-    .then((newSubscription) => {
-      console.log("Usuário inscrito para notificações push:", newSubscription);
+    .then((subscription) => {
+      console.log("Usuário inscrito para notificações push:", subscription);
 
-      // Enviar a nova assinatura para o servidor para ser armazenada
-      return fetch("http://localhost:3001/subscribe", {
+      // Extrair chaves e codificar em base64
+      const p256dhKey = new Uint8Array(subscription.getKey("p256dh")!);
+      const authKey = new Uint8Array(subscription.getKey("auth")!);
+
+      console.log("Chave p256dh como Uint8Array:", p256dhKey);
+      console.log("Chave auth como Uint8Array:", authKey);
+
+      const keys = {
+        p256dh: btoa(String.fromCharCode.apply(null, Array.from(p256dhKey))),
+        auth: btoa(String.fromCharCode.apply(null, Array.from(authKey))),
+      };
+
+      console.log("Chave p256dh codificada em base64:", keys.p256dh);
+      console.log("Chave auth codificada em base64:", keys.auth);
+
+      // Envia a assinatura para o servidor
+      return fetch("https://cemear-b549eb196d7c.herokuapp.com/subscribe", {
         method: "POST",
-        body: JSON.stringify(newSubscription),
+        body: JSON.stringify({
+          endpoint: subscription.endpoint,
+          keys: keys,
+        }),
         headers: {
           "Content-Type": "application/json",
         },
@@ -96,16 +99,23 @@ function subscribeUserToPush(registration: ServiceWorkerRegistration) {
 
 // Função utilitária para converter a chave VAPID de base64 para Uint8Array
 function urlBase64ToUint8Array(base64String: string) {
+  // Adiciona padding, se necessário
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding)
     .replace(/\-/g, "+")
     .replace(/_/g, "/");
 
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
+  try {
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
 
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    console.log("Conversão de chave VAPID bem-sucedida:", outputArray);
+    return outputArray;
+  } catch (error) {
+    console.error("Erro ao converter chave VAPID:", error);
+    throw new Error("Chave VAPID inválida");
   }
-  return outputArray;
 }

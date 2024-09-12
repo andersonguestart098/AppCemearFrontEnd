@@ -82,7 +82,14 @@ const App: React.FC = () => {
     <div style={{ padding: "20px", textAlign: "center" }}>
       <NavBar />
 
-      <div>
+      <div
+        style={{
+          paddingTop: "40px", // Adiciona um espaçamento entre o NavBar e os botões
+          display: "flex",
+          justifyContent: "center", // Centraliza os botões horizontalmente (opcional)
+          gap: "16px", // Espaçamento entre os botões
+        }}
+      >
         {/* Renderização condicional baseada no tipo de usuário */}
         {tipoUsuario === "admin" ? (
           <>

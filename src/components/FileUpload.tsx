@@ -37,11 +37,15 @@ const FileUploadComponent: React.FC = () => {
     setSuccess(null);
 
     try {
-      await axios.post("http://localhost:3001/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      await axios.post(
+        "https://cemear-b549eb196d7c.herokuapp.com/upload",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
       setSuccess("Arquivo enviado com sucesso!");
       setFile(null); // Limpa o arquivo após o upload
     } catch (err) {

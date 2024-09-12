@@ -47,21 +47,23 @@ self.addEventListener("activate", (event) => {
 });
 
 // Event listener for push notifications
-self.addEventListener("push", (event) => {
-  console.log("Service Worker: Push event recebido", event);
 
-  const data = event.data ? event.data.json() : {};
-  console.log("Dados da notificação:", data);
+self.addEventListener("push", function (event) {
+  console.log("Evento de push recebido:", event);
 
-  const title = data.title || "Nova Notificação";
+  let data = {};
+  if (event.data) {
+    data = event.data.json();
+  }
+
   const options = {
-    body: data.body || "Você tem uma nova notificação!",
-    icon: "/path/to/icon.png", // Altere para o caminho do ícone que deseja usar
-    badge: "/path/to/badge.png", // Altere para o caminho do badge que deseja usar
+    body: data.body,
+    icon: data.icon || "/default-icon.png",
   };
 
-  console.log("Exibindo notificação", { title, options });
-  event.waitUntil(self.registration.showNotification(title, options));
+  console.log("Mostrando notificação com dados:", data);
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
 // Event listener for notification clicks

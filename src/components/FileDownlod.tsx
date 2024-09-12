@@ -18,7 +18,9 @@ const FileList: React.FC = () => {
   useEffect(() => {
     const fetchFiles = async () => {
       try {
-        const response = await axios.get("http://localhost:3001/files");
+        const response = await axios.get(
+          "https://cemear-b549eb196d7c.herokuapp.com/files"
+        );
         setFiles(response.data);
       } catch (error) {
         console.error("Erro ao carregar arquivos", error);
@@ -53,7 +55,7 @@ const FileList: React.FC = () => {
               <ListItemText
                 primary={
                   <Link
-                    href={`http://localhost:3001${file.path}`}
+                    href={`https://cemear-b549eb196d7c.herokuapp.com${file.path}`}
                     download
                     target="_blank"
                     rel="noopener noreferrer"

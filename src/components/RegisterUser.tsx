@@ -9,6 +9,8 @@ import {
   FormControl,
   Grid,
   Container,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -22,27 +24,49 @@ const RegisterUser: React.FC<RegisterUserProps> = ({ closeModal }) => {
   const [password, setPassword] = useState("");
   const [tipoUsuario, setTipoUsuario] = useState("user");
   const [error, setError] = useState<string | null>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false); // Estado para controlar o Snackbar
   const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null); // Limpar o erro antes do envio
 
     try {
-      const response = await axios.post("http://localhost:3001/auth/register", {
-        usuario,
-        password,
-        tipoUsuario,
-      });
+      const response = await axios.post(
+        "https://cemear-b549eb196d7c.herokuapp.com/auth/register",
+        {
+          usuario,
+          password,
+          tipoUsuario,
+        }
+      );
 
       if (response.status === 200) {
-        console.log("User registered successfully");
-        navigate("/main"); // Redireciona para a página principal
-        if (closeModal) closeModal(); // Verifica se closeModal existe antes de chamá-lo
+        console.log("Usuário registrado com sucesso");
+
+        // Exibe o Snackbar
+        setSnackbarOpen(true);
+
+        // Limpa os campos do formulário
+        setUsuario("");
+        setPassword("");
+        setTipoUsuario("user");
+
+        // Fecha o modal se a função `closeModal` foi passada
+        if (closeModal) closeModal();
+
+        // Redireciona para a página principal (opcional)
+        navigate("/main");
       }
     } catch (err) {
-      setError("Failed to register user. Please try again.");
-      console.error("Registration error:", err);
+      setError("Falha ao registrar o usuário. Tente novamente.");
+      console.error("Erro no registro:", err);
     }
+  };
+
+  // Função para fechar o Snackbar
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
   };
 
   return (
@@ -54,7 +78,7 @@ const RegisterUser: React.FC<RegisterUserProps> = ({ closeModal }) => {
         <Grid container spacing={2}>
           <Grid item xs={12}>
             <TextField
-              label="Email"
+              label="Usuário"
               variant="outlined"
               value={usuario}
               onChange={(e) => setUsuario(e.target.value)}
@@ -64,7 +88,7 @@ const RegisterUser: React.FC<RegisterUserProps> = ({ closeModal }) => {
           </Grid>
           <Grid item xs={12}>
             <TextField
-              label="Password"
+              label="Senha"
               type="password"
               variant="outlined"
               value={password}
@@ -81,7 +105,7 @@ const RegisterUser: React.FC<RegisterUserProps> = ({ closeModal }) => {
                 onChange={(e) => setTipoUsuario(e.target.value)}
                 label="Tipo de Usuário"
               >
-                <MenuItem value="admin">Adiministrador</MenuItem>
+                <MenuItem value="admin">Administrador</MenuItem>
                 <MenuItem value="user" defaultChecked>
                   Usuário
                 </MenuItem>
@@ -97,11 +121,23 @@ const RegisterUser: React.FC<RegisterUserProps> = ({ closeModal }) => {
           </Grid>
           <Grid item xs={12}>
             <Button type="submit" variant="contained" color="primary" fullWidth>
-              Register
+              Registrar
             </Button>
           </Grid>
         </Grid>
       </form>
+
+      {/* Snackbar para exibir notificação */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={4000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }} // Localização do Snackbar
+      >
+        <Alert onClose={handleSnackbarClose} severity="success">
+          Usuário {usuario} registrado com sucesso!
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
