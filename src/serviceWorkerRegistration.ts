@@ -124,4 +124,3 @@ function urlBase64ToUint8Array(base64String: string) {
 function arrayBufferToBase64(buffer: Uint8Array) {
   return btoa(String.fromCharCode.apply(null, buffer as unknown as number[]));
 }
-``;
