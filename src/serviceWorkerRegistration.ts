@@ -63,8 +63,8 @@ function subscribeUserToPush(registration: ServiceWorkerRegistration) {
       console.log("Chave auth como Uint8Array:", authKey);
 
       const keys = {
-        p256dh: btoa(String.fromCharCode.apply(null, Array.from(p256dhKey))),
-        auth: btoa(String.fromCharCode.apply(null, Array.from(authKey))),
+        p256dh: arrayBufferToBase64(p256dhKey),
+        auth: arrayBufferToBase64(authKey),
       };
 
       console.log("Chave p256dh codificada em base64:", keys.p256dh);
@@ -119,3 +119,9 @@ function urlBase64ToUint8Array(base64String: string) {
     throw new Error("Chave VAPID inválida");
   }
 }
+
+// Função para converter ArrayBuffer para Base64
+function arrayBufferToBase64(buffer: Uint8Array) {
+  return btoa(String.fromCharCode.apply(null, buffer as unknown as number[]));
+}
+``;
