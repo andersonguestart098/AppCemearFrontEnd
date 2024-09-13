@@ -49,7 +49,7 @@ self.addEventListener("activate", (event) => {
 // Event listener for push notifications
 
 self.addEventListener("push", function (event) {
-  console.log("Evento de push recebido:", event);
+  console.log("Evento de Push recebido:", event);
 
   let data = {};
   if (event.data) {
