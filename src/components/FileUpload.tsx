@@ -7,7 +7,10 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  IconButton,
 } from "@mui/material";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload"; // Ícone de nuvem para upload
+import SendIcon from "@mui/icons-material/Send"; // Ícone de avião de papel para envio
 
 const FileUploadComponent: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -37,8 +40,8 @@ const FileUploadComponent: React.FC = () => {
     setSuccess(null);
 
     try {
-      await axios.post(
-        "https://cemear-b549eb196d7c.herokuapp.com/upload",
+      const response = await axios.post(
+        "http://localhost:3001/upload",
         formData,
         {
           headers: {
@@ -59,34 +62,66 @@ const FileUploadComponent: React.FC = () => {
 
   return (
     <Box sx={{ padding: 3, maxWidth: 600, margin: "auto" }}>
-      <Typography variant="h6" gutterBottom></Typography>
-      <Box sx={{ mb: 2 }}>
+      <Box
+        sx={{
+          mb: 2,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <input
           type="file"
           onChange={onFileChange}
           style={{ display: "none" }}
+          accept=".jpg,.jpeg,.png,.pdf,.csv,.xls,.xlsx" // Permite múltiplos tipos de arquivos
           id="file-upload"
         />
         <label htmlFor="file-upload">
-          <Button variant="contained" component="span">
-            Selecionar Arquivo
+          <Button
+            variant="outlined"
+            component="span"
+            startIcon={<CloudUploadIcon />} // Ícone de nuvem
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              width: "200px", // Largura do botão
+              height: "60px", // Altura do botão
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
+              fontSize: "12px", // Diminui o tamanho da fonte
+              justifyContent: "flex-start", // Alinha o texto à esquerda
+            }}
+          >
+            {file ? file.name : "Selecionar Arquivo"}
           </Button>
         </label>
-        {file && (
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            {file.name}
-          </Typography>
-        )}
+
+        {/* Botão de envio com formato circular e spinner */}
+        <IconButton
+          color="primary"
+          onClick={onUpload}
+          disabled={uploading}
+          sx={{
+            width: "60px",
+            height: "60px",
+            borderRadius: "50%",
+            backgroundColor: "#1976d2",
+            "&:hover": { backgroundColor: "#1565c0" },
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          {uploading ? (
+            <CircularProgress size={24} sx={{ color: "#fff" }} />
+          ) : (
+            <SendIcon sx={{ fontSize: 28, color: "#fff" }} />
+          )}
+        </IconButton>
       </Box>
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={onUpload}
-        disabled={uploading}
-        sx={{ display: "block", mb: 2 }}
-      >
-        {uploading ? <CircularProgress size={24} /> : "Enviar Arquivo"}
-      </Button>
+
       <Snackbar
         open={openSnackbar}
         autoHideDuration={6000}

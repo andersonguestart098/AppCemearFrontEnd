@@ -191,9 +191,6 @@ const App: React.FC = () => {
 
       <Modal open={isFileDownloadOpen} onClose={closeFileDownloadModal}>
         <Box sx={style}>
-          <Typography variant="h6" component="h2">
-            Arquivos Disponíveis para Download:
-          </Typography>
           <FileDownloadComponent />
           <Button
             variant="outlined"
