@@ -11,20 +11,22 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  TextField,
   Dialog,
   DialogContent,
   DialogActions,
+  Skeleton, // Importando o componente Skeleton
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// Conectar ao Socket.IO
-const socket = io("http://localhost:3001", {
+// URL base do Heroku
+const baseURL = "http://localhost:3001";
+
+// Conectar ao Socket.IO usando a URL do Heroku
+const socket = io(baseURL, {
   path: "/socket.io", // Caminho correto para o Socket.IO
 });
 
@@ -32,11 +34,9 @@ const PostList: React.FC = () => {
   const [posts, setPosts] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [postsPerPage] = useState(20);
+  const [loading, setLoading] = useState(true); // Estado de carregamento
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedPost, setSelectedPost] = useState<string | null>(null);
-  const [editingPostId, setEditingPostId] = useState<string | null>(null);
-  const [editedTitulo, setEditedTitulo] = useState<string>("");
-  const [editedConteudo, setEditedConteudo] = useState<string>("");
   const [openImageDialog, setOpenImageDialog] = useState<string | null>(null);
 
   const indexOfLastPost = currentPage * postsPerPage;
@@ -46,32 +46,49 @@ const PostList: React.FC = () => {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const response = await axios.get(
-          "https://cemear-b549eb196d7c.herokuapp.com/posts"
-        );
+        const response = await axios.get(`${baseURL}/posts`);
+        console.log("Posts recebidos da API: ", response.data);
         setPosts(response.data);
       } catch (error) {
+        console.error("Erro ao buscar postagens:", error);
         toast.error("Erro ao buscar postagens");
+      } finally {
+        setLoading(false); // Define o estado de carregamento como falso após os dados serem carregados
       }
     };
+
     fetchPosts();
 
+    // Log de conexão de Socket.IO
+    socket.on("connect", () => {
+      console.log("Conectado ao Socket.IO:", socket.id);
+    });
+
+    // Log de desconexão de Socket.IO
+    socket.on("disconnect", () => {
+      console.log("Desconectado do Socket.IO");
+    });
+
     // Escuta o evento de novo post via Socket.IO
-    socket.on("new-post", async () => {
-      try {
-        const response = await axios.get(
-          "https://cemear-b549eb196d7c.herokuapp.com/posts"
-        );
-        setPosts(response.data);
-        toast.info("Novo post adicionado!");
-      } catch (error) {
-        toast.error("Erro ao atualizar postagens");
+    socket.on("new-post", (newPost) => {
+      console.log("Evento new-post recebido:", newPost); // Log para verificar a recepção do evento
+
+      // Verifique se o novo post contém as informações necessárias antes de atualizá-lo na lista de posts
+      if (newPost && newPost.titulo && newPost.conteudo) {
+        setPosts((prevPosts) => [newPost, ...prevPosts]);
+
+        // Exibe notificação local usando toast
+        toast.info(`Novo post adicionado: ${newPost.titulo}`);
+      } else {
+        console.error("Novo post recebido, mas faltam dados: ", newPost);
       }
     });
 
     // Desconectar ao desmontar o componente
     return () => {
       socket.off("new-post");
+      socket.off("connect");
+      socket.off("disconnect");
     };
   }, []);
 
@@ -88,43 +105,10 @@ const PostList: React.FC = () => {
     setSelectedPost(null);
   };
 
-  const handleEdit = (postId: string, titulo: string, conteudo: string) => {
-    setEditingPostId(postId);
-    setEditedTitulo(titulo);
-    setEditedConteudo(conteudo);
-    handleClose();
-  };
-
-  const handleSaveEdit = async (postId: string) => {
-    try {
-      await axios.put(
-        `https://cemear-b549eb196d7c.herokuapp.com/posts/${postId}`,
-        {
-          titulo: editedTitulo,
-          conteudo: editedConteudo,
-        }
-      );
-
-      setPosts((prevPosts) =>
-        prevPosts.map((post) =>
-          post.id === postId
-            ? { ...post, titulo: editedTitulo, conteudo: editedConteudo }
-            : post
-        )
-      );
-      setEditingPostId(null);
-      toast.success("Post editado com sucesso!");
-    } catch (error) {
-      toast.error("Erro ao editar post");
-    }
-  };
-
   const handleDelete = async () => {
     if (selectedPost) {
       try {
-        await axios.delete(
-          `https://cemear-b549eb196d7c.herokuapp.com/posts/${selectedPost}`
-        );
+        await axios.delete(`${baseURL}/posts/${selectedPost}`);
         setPosts(posts.filter((post) => post.id !== selectedPost));
         toast.success("Post deletado com sucesso!");
         handleClose();
@@ -153,132 +137,133 @@ const PostList: React.FC = () => {
   };
 
   return (
-    <Box padding={2}>
-      <Typography variant="h6" gutterBottom>
+    <Box padding={2} sx={{ backgroundColor: "#F3F3F3" }}>
+      <Typography
+        variant="h6"
+        gutterBottom
+        sx={{ color: "#0B68A9", fontWeight: "bold" }}
+      >
         Postagens
       </Typography>
       <List>
-        {currentPosts.map((post) => (
-          <ListItem key={post.id} sx={{ padding: "20px" }}>
-            <Card
-              variant="outlined"
-              sx={{
-                width: "100%",
-                borderRadius: "12px",
-                border: "2px solid #e0e0e0",
-                boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-                padding: "16px",
-                position: "relative",
-              }}
-            >
-              <Typography
-                variant="h5"
-                sx={{ fontWeight: "bold", color: "#333", padding: "10px" }}
-              >
-                {post.titulo}
-              </Typography>
-
-              {post.imagePath && (
-                <Box
+        {loading
+          ? Array.from(new Array(postsPerPage)).map((_, index) => (
+              <ListItem key={index} sx={{ padding: "20px" }}>
+                <Card
+                  variant="outlined"
                   sx={{
-                    marginBottom: "16px",
-                    cursor: "pointer",
-                    textAlign: "center",
+                    width: "100%",
+                    borderRadius: "12px",
+                    border: "2px solid #e0e0e0",
+                    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+                    padding: "16px",
+                    position: "relative",
+                    backgroundColor: "#ffffff",
                   }}
-                  onClick={() => handleImageClick(post.imagePath)}
                 >
-                  <img
-                    src={`https://cemear-b549eb196d7c.herokuapp.com${post.imagePath}`}
-                    alt={post.titulo}
-                    style={{
-                      width: "260px", // Largura fixa para todas as miniaturas
-                      height: "260px", // Altura fixa para todas as miniaturas
-                      objectFit: "cover", // Mantém a proporção da imagem, mas pode cortar se necessário
-                      borderRadius: "8px",
+                  <Skeleton variant="text" width="40%" height={40} />
+                  <Skeleton
+                    variant="rectangular"
+                    width="100%"
+                    height={200}
+                    sx={{ marginY: 2 }}
+                  />
+                  <Skeleton variant="text" width="60%" />
+                </Card>
+              </ListItem>
+            ))
+          : currentPosts.map((post) => {
+              if (!post || !post.titulo || !post.conteudo) {
+                return null;
+              }
+
+              return (
+                <ListItem key={post.id} sx={{ padding: "20px" }}>
+                  <Card
+                    variant="outlined"
+                    sx={{
+                      width: "100%",
+                      borderRadius: "12px",
+                      border: "2px solid #FF9D12",
+                      boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+                      padding: "16px",
+                      backgroundColor: "#ffffff",
                     }}
-                  />
-                </Box>
-              )}
-
-              <Typography
-                variant="body1"
-                sx={{ color: "#555", marginTop: "8px" }}
-              >
-                {post.conteudo}
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{ color: "#333", marginTop: "8px", fontSize: "14px" }}
-              >
-                {new Date(post.created_at).toLocaleString()}
-              </Typography>
-
-              <IconButton
-                onClick={(event) => handleClick(event, post.id)}
-                sx={{ position: "absolute", top: "16px", right: "16px" }}
-              >
-                <MoreVertIcon />
-              </IconButton>
-
-              <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl) && selectedPost === post.id}
-                onClose={handleClose}
-              >
-                <MenuItem
-                  onClick={() =>
-                    handleEdit(post.id, post.titulo, post.conteudo)
-                  }
-                >
-                  <EditIcon sx={{ marginRight: "8px" }} />
-                  Editar
-                </MenuItem>
-                <MenuItem onClick={handleDelete}>
-                  <DeleteIcon sx={{ marginRight: "8px" }} />
-                  Excluir
-                </MenuItem>
-              </Menu>
-
-              {editingPostId === post.id && (
-                <>
-                  <TextField
-                    label="Título"
-                    variant="outlined"
-                    fullWidth
-                    value={editedTitulo}
-                    onChange={(e) => setEditedTitulo(e.target.value)}
-                    sx={{ marginBottom: "10px" }}
-                  />
-                  <TextField
-                    label="Conteúdo"
-                    variant="outlined"
-                    fullWidth
-                    multiline
-                    rows={4}
-                    value={editedConteudo}
-                    onChange={(e) => setEditedConteudo(e.target.value)}
-                    sx={{ marginBottom: "10px" }}
-                  />
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={() => handleSaveEdit(post.id)}
                   >
-                    Salvar
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="secondary"
-                    onClick={() => setEditingPostId(null)}
-                    sx={{ marginLeft: "10px" }}
-                  >
-                    Cancelar
-                  </Button>
-                </>
-              )}
-            </Card>
-          </ListItem>
-        ))}
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        fontWeight: "bold",
+                        color: "#0B68A9",
+                        padding: "10px",
+                      }}
+                    >
+                      {post.titulo}
+                    </Typography>
+
+                    {post.imagePath && (
+                      <Box
+                        sx={{
+                          marginBottom: "16px",
+                          cursor: "pointer",
+                          textAlign: "center",
+                          height: "350px",
+                          width: "100%",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          overflow: "hidden",
+                        }}
+                        onClick={() => handleImageClick(post.imagePath)}
+                      >
+                        <img
+                          src={`${post.imagePath}`}
+                          alt={post.titulo}
+                          style={{
+                            width: "100%",
+                            height: "auto",
+                            maxHeight: "350px",
+                            objectFit: "cover",
+                            borderRadius: "8px",
+                          }}
+                        />
+                      </Box>
+                    )}
+
+                    <Typography
+                      variant="body1"
+                      sx={{ color: "#555", marginTop: "8px" }}
+                    >
+                      {post.conteudo}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: "#333", marginTop: "8px", fontSize: "14px" }}
+                    >
+                      {new Date(post.created_at).toLocaleString()}
+                    </Typography>
+
+                    <IconButton
+                      onClick={(event) => handleClick(event, post.id)}
+                      sx={{ position: "absolute", top: "16px", right: "16px" }}
+                    >
+                      <MoreVertIcon />
+                    </IconButton>
+
+                    <Menu
+                      anchorEl={anchorEl}
+                      open={Boolean(anchorEl) && selectedPost === post.id}
+                      onClose={handleClose}
+                    >
+                      <MenuItem onClick={handleDelete}>
+                        <DeleteIcon sx={{ marginRight: "8px" }} />
+                        Excluir
+                      </MenuItem>
+                    </Menu>
+                  </Card>
+                </ListItem>
+              );
+            })}
       </List>
 
       <Box
@@ -292,6 +277,7 @@ const PostList: React.FC = () => {
           variant="outlined"
           onClick={handlePreviousPage}
           disabled={currentPage === 1}
+          sx={{ borderColor: "#0B68A9", color: "#0B68A9" }}
         >
           Anterior
         </Button>
@@ -299,40 +285,11 @@ const PostList: React.FC = () => {
           variant="outlined"
           onClick={handleNextPage}
           disabled={currentPage * postsPerPage >= posts.length}
+          sx={{ borderColor: "#0B68A9", color: "#0B68A9" }}
         >
           Próximo
         </Button>
       </Box>
-
-      {/* Dialog para imagem em tela cheia com botão de fechar */}
-      <Dialog open={Boolean(openImageDialog)} onClose={handleCloseImageDialog}>
-        <DialogActions sx={{ justifyContent: "flex-end", padding: "8px" }}>
-          <IconButton onClick={handleCloseImageDialog}>
-            <CloseIcon />
-          </IconButton>
-        </DialogActions>
-        <DialogContent
-          sx={{
-            width: "100%",
-            height: "100vh",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: "black",
-            padding: 0,
-          }}
-        >
-          <img
-            src={`https://cemear-b549eb196d7c.herokuapp.com${openImageDialog}`}
-            alt="Imagem em tela cheia"
-            style={{
-              maxWidth: "100%",
-              maxHeight: "100vh",
-              objectFit: "contain",
-            }}
-          />
-        </DialogContent>
-      </Dialog>
 
       <ToastContainer />
     </Box>

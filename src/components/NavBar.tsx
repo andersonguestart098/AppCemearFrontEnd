@@ -37,8 +37,8 @@ function ResponsiveAppBar() {
           margin: 0,
           border: "none",
           zIndex: 1000,
-          boxShadow: "none", // Remove qualquer sombra padrão
-          backgroundColor: "#dddd",
+          boxShadow: "none",
+          backgroundColor: "#0B68A9", // Usando o azul principal
         }}
       >
         <Container maxWidth="xl">
@@ -48,12 +48,12 @@ function ResponsiveAppBar() {
           >
             {/* Logo alinhada à esquerda */}
             <Box sx={{ display: "flex", alignItems: "center" }}>
-              <img src={logoSrc} alt="Logo" style={{ height: 20 }} />
+              <img src={logoSrc} alt="Logo" style={{ width: 120 }} />
             </Box>
 
             {/* Saudação e ícone de logout alinhados à direita */}
             <Box sx={{ display: "flex", alignItems: "center" }}>
-              <IconButton onClick={handleLogout} sx={{ color: "black" }}>
+              <IconButton onClick={handleLogout} sx={{ color: "white" }}>
                 <LogoutIcon />
               </IconButton>
             </Box>

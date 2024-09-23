@@ -29,9 +29,9 @@ const style = {
 
 const buttonStyle = {
   borderRadius: "50%",
-  width: "56px",
-  height: "56px",
-  margin: "5px",
+  width: "65px",
+  height: "65px",
+  margin: "3px",
 };
 
 const App: React.FC = () => {
@@ -84,58 +84,58 @@ const App: React.FC = () => {
 
       <div
         style={{
-          paddingTop: "40px", // Adiciona um espaçamento entre o NavBar e os botões
+          paddingTop: "40px",
           display: "flex",
-          justifyContent: "center", // Centraliza os botões horizontalmente (opcional)
-          gap: "16px", // Espaçamento entre os botões
+          justifyContent: "center",
+          flexWrap: "wrap", // Se necessário, permite que os botões se reagrupem em outra linha
         }}
       >
-        {/* Renderização condicional baseada no tipo de usuário */}
         {tipoUsuario === "admin" ? (
           <>
             <IconButton
               style={buttonStyle}
               color="primary"
-              onClick={openPostFormModal}
+              onClick={() => setIsPostFormOpen(true)}
             >
-              <PostAddIcon />
+              <PostAddIcon style={{ fontSize: 36 }} /> {/* Ícone maior */}
             </IconButton>
             <IconButton
               style={buttonStyle}
               color="success"
-              onClick={openFileUploadModal}
+              onClick={() => setIsFileUploadOpen(true)}
             >
-              <UploadFileIcon />
+              <UploadFileIcon style={{ fontSize: 36 }} /> {/* Ícone maior */}
             </IconButton>
             <IconButton
               style={buttonStyle}
               color="warning"
-              onClick={openFileDownloadModal}
+              onClick={() => setIsFileDownloadOpen(true)}
             >
-              <DownloadForOfflineIcon />
+              <DownloadForOfflineIcon style={{ fontSize: 36 }} />{" "}
+              {/* Ícone maior */}
             </IconButton>
             <IconButton
               style={buttonStyle}
               color="info"
-              onClick={openRegisterModal}
+              onClick={() => setIsRegisterOpen(true)}
             >
-              <PersonAddIcon />
+              <PersonAddIcon style={{ fontSize: 36 }} /> {/* Ícone maior */}
             </IconButton>
             <IconButton
               style={buttonStyle}
               color="secondary"
-              onClick={openCalendarModal}
+              onClick={() => setIsCalendarOpen(true)}
             >
-              <CalendarTodayIcon />
+              <CalendarTodayIcon style={{ fontSize: 36 }} /> {/* Ícone maior */}
             </IconButton>
           </>
         ) : tipoUsuario === "user" ? (
           <IconButton
             style={buttonStyle}
             color="secondary"
-            onClick={openCalendarModal}
+            onClick={() => setIsCalendarOpen(true)}
           >
-            <CalendarTodayIcon />
+            <CalendarTodayIcon style={{ fontSize: 36 }} /> {/* Ícone maior */}
           </IconButton>
         ) : null}
       </div>
@@ -146,9 +146,6 @@ const App: React.FC = () => {
       {/* Modals */}
       <Modal open={isPostFormOpen} onClose={closePostFormModal}>
         <Box sx={style}>
-          <Typography variant="h6" component="h2">
-            Adicionar Post:
-          </Typography>
           <PostForm closeModal={closePostFormModal} />
         </Box>
       </Modal>

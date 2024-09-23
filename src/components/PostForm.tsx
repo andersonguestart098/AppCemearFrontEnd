@@ -1,6 +1,13 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { Box, Button, TextField, CircularProgress, Input } from "@mui/material";
+import {
+  Box,
+  Button,
+  TextField,
+  CircularProgress,
+  Typography,
+} from "@mui/material";
+import { CloudUpload, Send } from "@mui/icons-material"; // Ícones do Material UI
 
 interface PostFormProps {
   closeModal: () => void;
@@ -39,15 +46,11 @@ const PostForm: React.FC<PostFormProps> = ({ closeModal }) => {
 
     try {
       console.log("Enviando dados:", { titulo, conteudo, image });
-      await axios.post(
-        "https://cemear-b549eb196d7c.herokuapp.com/posts",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      await axios.post("http://localhost:3001/posts", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       setConteudo("");
       setTitulo("");
@@ -62,7 +65,19 @@ const PostForm: React.FC<PostFormProps> = ({ closeModal }) => {
   };
 
   return (
-    <Box padding={2}>
+    <Box
+      padding={2}
+      sx={{
+        backgroundColor: "#fff",
+        borderRadius: "8px",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+      }}
+    >
+      {/* Título centralizado */}
+      <Typography variant="h6" align="center" gutterBottom>
+        Adicionar Post
+      </Typography>
+
       <form onSubmit={handleSubmit}>
         <Box marginBottom={2}>
           <TextField
@@ -86,37 +101,64 @@ const PostForm: React.FC<PostFormProps> = ({ closeModal }) => {
             required
           />
         </Box>
-        <Box marginBottom={2}>
-          <Input
+        <Box
+          marginBottom={2}
+          display="flex"
+          justifyContent="space-between" // Isso garante que os ícones fiquem nas extremidades opostas
+          alignItems="center"
+        >
+          {/* Botão de upload com ícone de nuvem e texto "Anexo" */}
+          <input
+            accept="image/*"
+            style={{ display: "none" }}
+            id="icon-button-file"
             type="file"
             onChange={handleImageChange}
-            inputProps={{ accept: "image/*" }}
           />
+          <label htmlFor="icon-button-file">
+            <Button
+              variant="outlined"
+              component="span"
+              startIcon={<CloudUpload />}
+            >
+              Anexo
+            </Button>
+          </label>
+
+          {/* Espaçamento flexível para separar os ícones */}
+          <Box flexGrow={1} />
+
+          {/* Botão de enviar com ícone de avião de papel à direita */}
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            disabled={loading}
+            sx={{
+              width: "60px",
+              height: "60px",
+              borderRadius: "50%",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "#2196f3",
+              "&:hover": {
+                backgroundColor: "#1976d2",
+              },
+            }}
+          >
+            {loading ? (
+              <CircularProgress size={24} sx={{ color: "#fff" }} /> // Spinner branco
+            ) : (
+              <Send sx={{ fontSize: 28, color: "#fff" }} />
+            )}
+          </Button>
         </Box>
         {error && (
           <Box marginBottom={2} color="red">
             {error}
           </Box>
         )}
-        <Box display="flex" justifyContent="flex-end" gap={1}>
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            disabled={loading}
-          >
-            {loading ? <CircularProgress size={24} /> : "Postar"}
-          </Button>
-          <Button
-            type="button"
-            onClick={closeModal}
-            variant="outlined"
-            color="secondary"
-            disabled={loading}
-          >
-            Fechar
-          </Button>
-        </Box>
       </form>
     </Box>
   );

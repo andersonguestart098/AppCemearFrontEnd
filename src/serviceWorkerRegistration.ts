@@ -42,6 +42,7 @@ export function register() {
   }
 }
 
+// Função para realizar a inscrição do usuário para notificações push
 function subscribeUserToPush(registration: ServiceWorkerRegistration) {
   const vapidPublicKey =
     "BDFt6_CYV5ca61PV7V3_ULiIjsNnikV5wxeU-4fHiFYrAeGlJ6U99C8lWSxz3aPgPe7PClp23wa2rgH25tDhj2Q"; // Substitua pela sua chave pública VAPID
@@ -59,23 +60,40 @@ function subscribeUserToPush(registration: ServiceWorkerRegistration) {
       const p256dhKey = new Uint8Array(subscription.getKey("p256dh")!);
       const authKey = new Uint8Array(subscription.getKey("auth")!);
 
-      console.log("Chave p256dh como Uint8Array:", p256dhKey);
-      console.log("Chave auth como Uint8Array:", authKey);
-
       const keys = {
         p256dh: arrayBufferToBase64(p256dhKey),
         auth: arrayBufferToBase64(authKey),
       };
 
-      console.log("Chave p256dh codificada em base64:", keys.p256dh);
-      console.log("Chave auth codificada em base64:", keys.auth);
+      // Recuperar o userId de onde ele está armazenado (localStorage, ou sessionStorage)
+      const userId = getUserIdFromLocalStorage();
+
+      if (!userId) {
+        throw new Error(
+          "User ID não encontrado. O usuário precisa estar logado."
+        );
+      }
+
+      // Verificar se o userId tem o formato de ObjectId do MongoDB (24 caracteres)
+      if (!/^[a-f\d]{24}$/i.test(userId)) {
+        throw new Error(
+          "User ID inválido. Deve ser um ObjectId de 24 caracteres."
+        );
+      }
+
+      console.log(
+        "Enviando a assinatura para o servidor com o userId:",
+        userId
+      );
+      console.log("Chaves a serem enviadas:", keys);
 
       // Envia a assinatura para o servidor
-      return fetch("https://cemear-b549eb196d7c.herokuapp.com/subscribe", {
+      return fetch("http://localhost:3001/subscribe", {
         method: "POST",
         body: JSON.stringify({
           endpoint: subscription.endpoint,
           keys: keys,
+          userId: userId, // Inclua o userId na requisição
         }),
         headers: {
           "Content-Type": "application/json",
@@ -97,9 +115,34 @@ function subscribeUserToPush(registration: ServiceWorkerRegistration) {
     });
 }
 
+// Função para capturar o userId corretamente do localStorage
+function getUserIdFromLocalStorage(): string | null {
+  const userId = localStorage.getItem("userId");
+
+  if (!userId) {
+    console.error("User ID não encontrado no localStorage.");
+    return null;
+  }
+
+  console.log("User ID recuperado do localStorage:", userId);
+  return userId;
+}
+
+// Após login bem-sucedido, certifique-se de que o userId seja armazenado corretamente
+function handleLoginSuccess(response: any) {
+  const userId = response.data.userId; // Certifique-se de que este é o _id correto do MongoDB
+
+  if (!userId || !/^[a-f\d]{24}$/i.test(userId)) {
+    throw new Error("User ID inválido após login.");
+  }
+
+  // Armazenar o userId no localStorage após login
+  localStorage.setItem("userId", userId);
+  console.log("User ID salvo no localStorage:", localStorage.getItem("userId"));
+}
+
 // Função utilitária para converter a chave VAPID de base64 para Uint8Array
-function urlBase64ToUint8Array(base64String: string) {
-  // Adiciona padding, se necessário
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding)
     .replace(/\-/g, "+")
@@ -112,6 +155,7 @@ function urlBase64ToUint8Array(base64String: string) {
     for (let i = 0; i < rawData.length; ++i) {
       outputArray[i] = rawData.charCodeAt(i);
     }
+
     console.log("Conversão de chave VAPID bem-sucedida:", outputArray);
     return outputArray;
   } catch (error) {
@@ -121,6 +165,6 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 // Função para converter ArrayBuffer para Base64
-function arrayBufferToBase64(buffer: Uint8Array) {
+function arrayBufferToBase64(buffer: Uint8Array): string {
   return btoa(String.fromCharCode.apply(null, buffer as unknown as number[]));
 }

@@ -6,7 +6,7 @@ import {
   Box,
   CircularProgress,
   Snackbar,
-  Alert, // Importando o componente de alerta do Material UI
+  Alert,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
@@ -75,21 +75,22 @@ const Login: React.FC = () => {
     setError(null); // Limpa o erro antes do envio
 
     try {
-      const response = await fetch(
-        "https://cemear-b549eb196d7c.herokuapp.com/auth/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ usuario, password }),
-        }
-      );
+      const response = await fetch("http://localhost:3001/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ usuario, password }),
+      });
 
       if (response.ok) {
         const data = await response.json();
+        // Armazena o token, tipo de usuário e ID do usuário
         localStorage.setItem("token", data.token);
         localStorage.setItem("tipoUsuario", data.tipoUsuario);
+
+        // **Armazena o _id correto do MongoDB no localStorage**
+        localStorage.setItem("userId", data.userId || data._id);
 
         setUsuario(data.tipoUsuario); // Atualizar o contexto com o tipo de usuário
         askNotificationPermission(); // Solicita permissão para notificações
