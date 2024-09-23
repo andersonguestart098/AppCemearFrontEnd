@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import io from "socket.io-client"; // Importar o Socket.IO
+import io from "socket.io-client";
 import {
   List,
   ListItem,
@@ -11,84 +11,74 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  TextField,
   Dialog,
   DialogContent,
   DialogActions,
-  Skeleton, // Importando o componente Skeleton
+  Skeleton,
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+import DownloadIcon from "@mui/icons-material/Download"; // Ícone para download
 import CloseIcon from "@mui/icons-material/Close";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import useNewPostChecker from "../useNewPostChecker";
+import { useUserContext } from "./UserContext"; // Supondo que você esteja utilizando um contexto para identificar o tipo de usuário
 
 // URL base do Heroku
 const baseURL = "http://localhost:3001";
 
-// Conectar ao Socket.IO usando a URL do Heroku
+// Conectar ao Socket.IO
 const socket = io(baseURL, {
-  path: "/socket.io", // Caminho correto para o Socket.IO
+  path: "/socket.io",
 });
 
 const PostList: React.FC = () => {
   const [posts, setPosts] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [postsPerPage] = useState(20);
-  const [loading, setLoading] = useState(true); // Estado de carregamento
+  const [loading, setLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedPost, setSelectedPost] = useState<string | null>(null);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editedTitulo, setEditedTitulo] = useState<string>("");
+  const [editedConteudo, setEditedConteudo] = useState<string>("");
   const [openImageDialog, setOpenImageDialog] = useState<string | null>(null);
+
+  const { tipoUsuario } = useUserContext(); // Usando o contexto para obter o tipo de usuário
 
   const indexOfLastPost = currentPage * postsPerPage;
   const indexOfFirstPost = indexOfLastPost - postsPerPage;
   const currentPosts = posts.slice(indexOfFirstPost, indexOfLastPost);
 
+  useNewPostChecker(setPosts);
+
   useEffect(() => {
     const fetchPosts = async () => {
       try {
         const response = await axios.get(`${baseURL}/posts`);
-        console.log("Posts recebidos da API: ", response.data);
         setPosts(response.data);
       } catch (error) {
-        console.error("Erro ao buscar postagens:", error);
         toast.error("Erro ao buscar postagens");
       } finally {
-        setLoading(false); // Define o estado de carregamento como falso após os dados serem carregados
+        setLoading(false);
       }
     };
 
     fetchPosts();
 
-    // Log de conexão de Socket.IO
-    socket.on("connect", () => {
-      console.log("Conectado ao Socket.IO:", socket.id);
-    });
-
-    // Log de desconexão de Socket.IO
-    socket.on("disconnect", () => {
-      console.log("Desconectado do Socket.IO");
-    });
-
-    // Escuta o evento de novo post via Socket.IO
+    // Configuração de Socket.IO para novos posts
     socket.on("new-post", (newPost) => {
-      console.log("Evento new-post recebido:", newPost); // Log para verificar a recepção do evento
-
-      // Verifique se o novo post contém as informações necessárias antes de atualizá-lo na lista de posts
       if (newPost && newPost.titulo && newPost.conteudo) {
         setPosts((prevPosts) => [newPost, ...prevPosts]);
-
-        // Exibe notificação local usando toast
         toast.info(`Novo post adicionado: ${newPost.titulo}`);
-      } else {
-        console.error("Novo post recebido, mas faltam dados: ", newPost);
       }
     });
 
-    // Desconectar ao desmontar o componente
     return () => {
       socket.off("new-post");
-      socket.off("connect");
-      socket.off("disconnect");
     };
   }, []);
 
@@ -103,6 +93,34 @@ const PostList: React.FC = () => {
   const handleClose = () => {
     setAnchorEl(null);
     setSelectedPost(null);
+  };
+
+  const handleEdit = (postId: string, titulo: string, conteudo: string) => {
+    setEditingPostId(postId);
+    setEditedTitulo(titulo);
+    setEditedConteudo(conteudo);
+    handleClose();
+  };
+
+  const handleSaveEdit = async (postId: string) => {
+    try {
+      await axios.put(`${baseURL}/posts/${postId}`, {
+        titulo: editedTitulo,
+        conteudo: editedConteudo,
+      });
+
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post.id === postId
+            ? { ...post, titulo: editedTitulo, conteudo: editedConteudo }
+            : post
+        )
+      );
+      setEditingPostId(null);
+      toast.success("Post editado com sucesso!");
+    } catch (error) {
+      toast.error("Erro ao editar post");
+    }
   };
 
   const handleDelete = async () => {
@@ -243,23 +261,79 @@ const PostList: React.FC = () => {
                       {new Date(post.created_at).toLocaleString()}
                     </Typography>
 
-                    <IconButton
-                      onClick={(event) => handleClick(event, post.id)}
-                      sx={{ position: "absolute", top: "16px", right: "16px" }}
-                    >
-                      <MoreVertIcon />
-                    </IconButton>
+                    {/* O menu de edição e exclusão só aparecerá para administradores */}
+                    {tipoUsuario === "admin" && (
+                      <>
+                        <IconButton
+                          onClick={(event) => handleClick(event, post.id)}
+                          sx={{
+                            position: "absolute",
+                            top: "16px",
+                            right: "16px",
+                          }}
+                        >
+                          <MoreVertIcon />
+                        </IconButton>
 
-                    <Menu
-                      anchorEl={anchorEl}
-                      open={Boolean(anchorEl) && selectedPost === post.id}
-                      onClose={handleClose}
-                    >
-                      <MenuItem onClick={handleDelete}>
-                        <DeleteIcon sx={{ marginRight: "8px" }} />
-                        Excluir
-                      </MenuItem>
-                    </Menu>
+                        <Menu
+                          anchorEl={anchorEl}
+                          open={Boolean(anchorEl) && selectedPost === post.id}
+                          onClose={handleClose}
+                        >
+                          <MenuItem
+                            onClick={() =>
+                              handleEdit(post.id, post.titulo, post.conteudo)
+                            }
+                          >
+                            <EditIcon sx={{ marginRight: "8px" }} />
+                            Editar
+                          </MenuItem>
+                          <MenuItem onClick={handleDelete}>
+                            <DeleteIcon sx={{ marginRight: "8px" }} />
+                            Excluir
+                          </MenuItem>
+                        </Menu>
+                      </>
+                    )}
+
+                    {/* Edição in-line */}
+                    {editingPostId === post.id && (
+                      <Box sx={{ marginTop: "16px" }}>
+                        <TextField
+                          label="Título"
+                          variant="outlined"
+                          fullWidth
+                          value={editedTitulo}
+                          onChange={(e) => setEditedTitulo(e.target.value)}
+                          sx={{ marginBottom: "10px" }}
+                        />
+                        <TextField
+                          label="Conteúdo"
+                          variant="outlined"
+                          fullWidth
+                          multiline
+                          rows={4}
+                          value={editedConteudo}
+                          onChange={(e) => setEditedConteudo(e.target.value)}
+                          sx={{ marginBottom: "10px" }}
+                        />
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={() => handleSaveEdit(post.id)}
+                        >
+                          Salvar
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="secondary"
+                          onClick={() => setEditingPostId(null)}
+                          sx={{ marginLeft: "10px" }}
+                        >
+                          Cancelar
+                        </Button>
+                      </Box>
+                    )}
                   </Card>
                 </ListItem>
               );

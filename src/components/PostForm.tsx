@@ -74,7 +74,12 @@ const PostForm: React.FC<PostFormProps> = ({ closeModal }) => {
       }}
     >
       {/* Título centralizado */}
-      <Typography variant="h6" align="center" gutterBottom>
+      <Typography
+        variant="h4"
+        align="center"
+        gutterBottom
+        style={{ color: "#0B68A9" }}
+      >
         Adicionar Post
       </Typography>
 
@@ -121,7 +126,7 @@ const PostForm: React.FC<PostFormProps> = ({ closeModal }) => {
               component="span"
               startIcon={<CloudUpload />}
             >
-              Anexo
+              {image ? image.name : "Anexo"}
             </Button>
           </label>
 

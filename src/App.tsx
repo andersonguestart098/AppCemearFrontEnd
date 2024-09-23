@@ -130,13 +130,23 @@ const App: React.FC = () => {
             </IconButton>
           </>
         ) : tipoUsuario === "user" ? (
-          <IconButton
-            style={buttonStyle}
-            color="secondary"
-            onClick={() => setIsCalendarOpen(true)}
-          >
-            <CalendarTodayIcon style={{ fontSize: 36 }} /> {/* Ícone maior */}
-          </IconButton>
+          <>
+            <IconButton
+              style={buttonStyle}
+              color="secondary"
+              onClick={() => setIsCalendarOpen(true)}
+            >
+              <CalendarTodayIcon style={{ fontSize: 36 }} /> {/* Ícone maior */}
+            </IconButton>
+            <IconButton
+              style={buttonStyle}
+              color="warning"
+              onClick={() => setIsFileDownloadOpen(true)}
+            >
+              <DownloadForOfflineIcon style={{ fontSize: 36 }} />{" "}
+              {/* Ícone maior */}
+            </IconButton>
+          </>
         ) : null}
       </div>
 
@@ -198,13 +208,6 @@ const App: React.FC = () => {
       <Modal open={isRegisterOpen} onClose={closeRegisterModal}>
         <Box sx={style}>
           <Register />
-          <Button
-            variant="outlined"
-            onClick={closeRegisterModal}
-            style={{ marginTop: "10px" }}
-          >
-            Fechar
-          </Button>
         </Box>
       </Modal>
     </div>

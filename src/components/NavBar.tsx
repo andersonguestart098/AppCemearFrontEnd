@@ -48,7 +48,7 @@ function ResponsiveAppBar() {
           >
             {/* Logo alinhada à esquerda */}
             <Box sx={{ display: "flex", alignItems: "center" }}>
-              <img src={logoSrc} alt="Logo" style={{ width: 120 }} />
+              <img src={logoSrc} alt="Logo" style={{ width: 125 }} />
             </Box>
 
             {/* Saudação e ícone de logout alinhados à direita */}

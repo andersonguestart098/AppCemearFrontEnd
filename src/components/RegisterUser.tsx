@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import PersonAddIcon from "@mui/icons-material/PersonAdd"; // Ícone de boneco com +
 
 interface RegisterUserProps {
   closeModal?: () => void; // Propriedade opcional
@@ -70,9 +71,22 @@ const RegisterUser: React.FC<RegisterUserProps> = ({ closeModal }) => {
   };
 
   return (
-    <Container maxWidth="sm" style={{ padding: "20px" }}>
-      <Typography variant="h4" align="center" gutterBottom>
-        Registrar Novo Usuário
+    <Container
+      maxWidth="sm"
+      style={{
+        padding: "20px",
+        backgroundColor: "#f9f9f9",
+        borderRadius: "8px",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+      }}
+    >
+      <Typography
+        variant="h4"
+        align="center"
+        gutterBottom
+        style={{ color: "#0B68A9" }}
+      >
+        Registrar Usuário
       </Typography>
       <form onSubmit={handleRegister}>
         <Grid container spacing={2}>
@@ -84,6 +98,7 @@ const RegisterUser: React.FC<RegisterUserProps> = ({ closeModal }) => {
               onChange={(e) => setUsuario(e.target.value)}
               required
               fullWidth
+              sx={{ backgroundColor: "#fff" }}
             />
           </Grid>
           <Grid item xs={12}>
@@ -95,6 +110,7 @@ const RegisterUser: React.FC<RegisterUserProps> = ({ closeModal }) => {
               onChange={(e) => setPassword(e.target.value)}
               required
               fullWidth
+              sx={{ backgroundColor: "#fff" }}
             />
           </Grid>
           <Grid item xs={12}>
@@ -104,6 +120,7 @@ const RegisterUser: React.FC<RegisterUserProps> = ({ closeModal }) => {
                 value={tipoUsuario}
                 onChange={(e) => setTipoUsuario(e.target.value)}
                 label="Tipo de Usuário"
+                sx={{ backgroundColor: "#fff" }}
               >
                 <MenuItem value="admin">Administrador</MenuItem>
                 <MenuItem value="user" defaultChecked>
@@ -120,7 +137,17 @@ const RegisterUser: React.FC<RegisterUserProps> = ({ closeModal }) => {
             )}
           </Grid>
           <Grid item xs={12}>
-            <Button type="submit" variant="contained" color="primary" fullWidth>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              fullWidth
+              startIcon={<PersonAddIcon />} // Ícone adicionado
+              sx={{
+                backgroundColor: "#0B68A9",
+                "&:hover": { backgroundColor: "#084d76" },
+              }}
+            >
               Registrar
             </Button>
           </Grid>

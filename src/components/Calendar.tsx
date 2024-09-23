@@ -50,16 +50,34 @@ const CalendarComponent: React.FC = () => {
     return events.some((event) => event.date === dateString) ? "highlight" : "";
   };
 
+  // Função para truncar descrições longas, agora com limite de 4 caracteres mais os "..."
+  const truncateText = (text: string, length: number) => {
+    return text.length > length ? text.substring(0, length) + "..." : text;
+  };
+
   const tileContent = ({ date }: { date: Date }) => {
     const dateString = date.toISOString().split("T")[0];
     const event = events.find((event) => event.date === dateString);
     return event ? (
       <div
-        className="event-description"
         onClick={(e) => handleClick(e, event)}
-        style={{ cursor: "pointer" }}
+        style={{
+          cursor: "pointer",
+          color: "#ffffff",
+          backgroundColor: "#f57c00",
+          padding: "4px 8px",
+          borderRadius: "8px",
+          fontSize: "12px",
+          width: "100%", // Garantir que o texto preencha a célula
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
       >
-        <span>{event.descricao}</span>
+        <span>{truncateText(event.descricao, 3)}</span>{" "}
+        {/* Exibe 4 letras mais os três pontos */}
       </div>
     ) : null;
   };
@@ -97,7 +115,7 @@ const CalendarComponent: React.FC = () => {
   return (
     <Container maxWidth="sm">
       <Box textAlign="center" mb={4}>
-        <Typography variant="h4" gutterBottom>
+        <Typography variant="h4" gutterBottom sx={{ color: "#1565c0" }}>
           Calendário Cemear
         </Typography>
       </Box>
@@ -107,6 +125,11 @@ const CalendarComponent: React.FC = () => {
         alignItems="center"
         flexDirection="column"
         mb={4}
+        sx={{
+          border: "2px solid #f57c00",
+          borderRadius: "12px",
+          padding: "16px",
+        }}
       >
         <Calendar
           onChange={(newValue) => {
@@ -130,11 +153,14 @@ const CalendarComponent: React.FC = () => {
             fullWidth
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
-            style={{ marginBottom: 16 }}
+            sx={{ marginBottom: "16px" }}
           />
           <Button
             variant="contained"
-            color="primary"
+            sx={{
+              backgroundColor: "#1565c0",
+              "&:hover": { backgroundColor: "#003c8f" },
+            }}
             onClick={handleAddEvent}
             fullWidth
           >
@@ -143,7 +169,7 @@ const CalendarComponent: React.FC = () => {
         </Box>
       )}
 
-      {/* Popover para mostrar a descrição do evento */}
+      {/* Popover para mostrar a descrição completa do evento */}
       <Popover
         id={id}
         open={open}
