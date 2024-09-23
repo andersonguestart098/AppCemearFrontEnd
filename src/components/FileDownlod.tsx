@@ -5,6 +5,7 @@ import {
   Typography,
   List,
   ListItem,
+  ListItemText,
   Link,
   CircularProgress,
   Card,
@@ -14,9 +15,26 @@ import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ImageIcon from "@mui/icons-material/Image";
 
+// Função para retornar o ícone apropriado para o arquivo
+const renderFileIcon = (type: string) => {
+  if (type.includes("pdf")) {
+    return <PictureAsPdfIcon sx={{ fontSize: 60, color: "#D32F2F" }} />;
+  } else if (type.includes("image")) {
+    return <ImageIcon sx={{ fontSize: 60, color: "#1976D2" }} />;
+  } else {
+    return <InsertDriveFileIcon sx={{ fontSize: 60, color: "#757575" }} />;
+  }
+};
+
 const FileList: React.FC = () => {
   const [files, setFiles] = useState<
-    { filename: string; path: string; type: string; size: string }[]
+    {
+      filename: string;
+      path: string;
+      type: string;
+      size: string;
+      createdAt: string;
+    }[] // Inclui o campo 'createdAt' (ou equivalente) com a data de criação
   >([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +43,14 @@ const FileList: React.FC = () => {
     const fetchFiles = async () => {
       try {
         const response = await axios.get("http://localhost:3001/files");
-        setFiles(response.data);
+
+        // Ordena os arquivos pela data (createdAt) do mais recente para o mais antigo
+        const sortedFiles = response.data.sort(
+          (a: any, b: any) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+
+        setFiles(sortedFiles);
       } catch (error) {
         console.error("Erro ao carregar arquivos", error);
         setError("Erro ao carregar arquivos. Tente novamente.");
@@ -36,17 +61,6 @@ const FileList: React.FC = () => {
 
     fetchFiles();
   }, []);
-
-  // Função para retornar o ícone apropriado para o arquivo
-  const renderFileIcon = (type: string) => {
-    if (type.includes("pdf")) {
-      return <PictureAsPdfIcon sx={{ fontSize: 60, color: "#D32F2F" }} />;
-    } else if (type.includes("image")) {
-      return <ImageIcon sx={{ fontSize: 60, color: "#1976D2" }} />;
-    } else {
-      return <InsertDriveFileIcon sx={{ fontSize: 60, color: "#757575" }} />;
-    }
-  };
 
   return (
     <Box sx={{ padding: 3, maxWidth: 800, margin: "auto" }}>
@@ -94,21 +108,22 @@ const FileList: React.FC = () => {
                           rel="noopener noreferrer"
                           color="primary"
                           underline="hover"
-                          onClick={(e) => {
-                            e.preventDefault(); // Previne a abertura da nova página
-                            const link = document.createElement("a");
-                            link.href = file.path; // URL completa do arquivo
-                            link.setAttribute("download", file.filename); // Define o nome do arquivo para download
-                            document.body.appendChild(link);
-                            link.click();
-                            link.remove();
-                          }}
                         >
                           {file.filename}
                         </Link>
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         {file.type} • {file.size}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(file.createdAt).toLocaleDateString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}{" "}
+                        {/* Formata a data */}
                       </Typography>
                     </CardContent>
                   </Box>
