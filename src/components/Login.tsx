@@ -75,13 +75,16 @@ const Login: React.FC = () => {
     setError(null); // Limpa o erro antes do envio
 
     try {
-      const response = await fetch("http://localhost:3001/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ usuario, password }),
-      });
+      const response = await fetch(
+        "https://cemear-b549eb196d7c.herokuapp.com/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ usuario, password }),
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();

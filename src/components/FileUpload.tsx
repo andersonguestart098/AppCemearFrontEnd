@@ -41,7 +41,7 @@ const FileUploadComponent: React.FC = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:3001/upload",
+        "https://cemear-b549eb196d7c.herokuapp.com/upload",
         formData,
         {
           headers: {

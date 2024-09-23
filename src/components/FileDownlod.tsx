@@ -42,7 +42,9 @@ const FileList: React.FC = () => {
   useEffect(() => {
     const fetchFiles = async () => {
       try {
-        const response = await axios.get("http://localhost:3001/files");
+        const response = await axios.get(
+          "https://cemear-b549eb196d7c.herokuapp.com/files"
+        );
 
         // Ordena os arquivos pela data (createdAt) do mais recente para o mais antigo
         const sortedFiles = response.data.sort(

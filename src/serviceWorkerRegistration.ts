@@ -88,7 +88,7 @@ function subscribeUserToPush(registration: ServiceWorkerRegistration) {
       console.log("Chaves a serem enviadas:", keys);
 
       // Envia a assinatura para o servidor
-      return fetch("http://localhost:3001/subscribe", {
+      return fetch("https://cemear-b549eb196d7c.herokuapp.com/subscribe", {
         method: "POST",
         body: JSON.stringify({
           endpoint: subscription.endpoint,

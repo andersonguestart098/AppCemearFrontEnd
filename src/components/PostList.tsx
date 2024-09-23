@@ -28,7 +28,7 @@ import useNewPostChecker from "../useNewPostChecker";
 import { useUserContext } from "./UserContext"; // Supondo que você esteja utilizando um contexto para identificar o tipo de usuário
 
 // URL base do Heroku
-const baseURL = "http://localhost:3001";
+const baseURL = "https://cemear-b549eb196d7c.herokuapp.com";
 
 // Conectar ao Socket.IO
 const socket = io(baseURL, {
