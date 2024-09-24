@@ -58,25 +58,20 @@ const App: React.FC = () => {
   const { tipoUsuario, setTipoUsuario } = useUserContext();
 
   useEffect(() => {
-    // Verifica se o token de autenticação existe no localStorage
     const token = localStorage.getItem("token");
 
     if (token) {
       const storedTipoUsuario = localStorage.getItem("tipoUsuario");
+
       if (storedTipoUsuario) {
         setTipoUsuario(storedTipoUsuario);
-      } else {
-        setTipoUsuario("user"); // Tipo de usuário padrão se não estiver salvo
+        navigate("/main"); // Redireciona diretamente para o componente principal se já estiver autenticado
       }
     } else {
-      // Se não houver token, redireciona para a tela de login
+      // Se o token não existir, mantém o fluxo normal e vai para a página de login
       navigate("/login");
     }
   }, [navigate, setTipoUsuario]);
-
-  if (!tipoUsuario) {
-    return <div>Carregando...</div>; // Tela de carregamento
-  }
 
   const handleCalendarClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
