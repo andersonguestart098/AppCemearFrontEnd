@@ -9,6 +9,7 @@ import {
   Alert,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { register, subscribeUserToPush } from "../serviceWorkerRegistration";
 
 // Exemplo de logo simples para simular o estilo do Trello
 const Logo = () => (
@@ -56,19 +57,6 @@ const Login: React.FC = () => {
     };
   }, [navigate]);
 
-  // Solicitar permissão para notificações após o login
-  const askNotificationPermission = () => {
-    if ("Notification" in window && Notification.permission !== "granted") {
-      Notification.requestPermission().then((permission) => {
-        if (permission === "granted") {
-          console.log("Notificações permitidas");
-        } else {
-          console.log("Notificações negadas");
-        }
-      });
-    }
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true); // Ativa o spinner
@@ -91,13 +79,17 @@ const Login: React.FC = () => {
         // Armazena o token, tipo de usuário e ID do usuário
         localStorage.setItem("token", data.token);
         localStorage.setItem("tipoUsuario", data.tipoUsuario);
+        localStorage.setItem("userId", data.userId || data._id); // Armazena o ID do usuário
 
-        // **Armazena o _id correto do MongoDB no localStorage**
-        localStorage.setItem("userId", data.userId || data._id);
+        // Solicita permissão para notificações
+        askNotificationPermission();
 
-        setUsuario(data.tipoUsuario); // Atualizar o contexto com o tipo de usuário
-        askNotificationPermission(); // Solicita permissão para notificações
-        navigate("/main"); // Redirecionar para a página principal
+        // Após login bem-sucedido, registra e inscreve o usuário para notificações push
+        const registration = await navigator.serviceWorker.ready;
+        subscribeUserToPush(registration);
+
+        // Redireciona para a página principal
+        navigate("/main");
       } else {
         const errorMsg = await response.json(); // Pega a mensagem de erro do servidor
         setError(errorMsg.msg || "Credenciais inválidas."); // Mensagem padrão caso o erro não tenha msg
@@ -108,6 +100,19 @@ const Login: React.FC = () => {
       setOpenSnackbar(true); // Abre a Snackbar para erro de rede ou outro
     } finally {
       setLoading(false); // Desativa o spinner
+    }
+  };
+
+  // Solicita permissão para notificações após o login
+  const askNotificationPermission = () => {
+    if ("Notification" in window && Notification.permission !== "granted") {
+      Notification.requestPermission().then((permission) => {
+        if (permission === "granted") {
+          console.log("Notificações permitidas");
+        } else {
+          console.log("Notificações negadas");
+        }
+      });
     }
   };
 
