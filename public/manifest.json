@@ -1,5 +1,5 @@
 {
-  "short_name": "CemearApp",
+  "short_name": "Cemear App",
   "name": "Cemear",
   "icons": [
     {
@@ -9,17 +9,18 @@
     },
     {
       "src": "/logoCE.png",
-      "sizes": "192x192",
+      "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "/logoCE.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "/logoCEFundo.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#1565c0",
+  "background_color": "#1565c0"
 }
