@@ -50,7 +50,7 @@ const CalendarComponent: React.FC = () => {
     return events.some((event) => event.date === dateString) ? "highlight" : "";
   };
 
-  // Função para truncar descrições longas, agora com limite de 4 caracteres mais os "..."
+  // Função para truncar descrições longas
   const truncateText = (text: string, length: number) => {
     return text.length > length ? text.substring(0, length) + "..." : text;
   };
@@ -76,8 +76,7 @@ const CalendarComponent: React.FC = () => {
           textOverflow: "ellipsis",
         }}
       >
-        <span>{truncateText(event.descricao, 3)}</span>{" "}
-        {/* Exibe 4 letras mais os três pontos */}
+        <span>{truncateText(event.descricao, 3)}</span>
       </div>
     ) : null;
   };
@@ -129,6 +128,7 @@ const CalendarComponent: React.FC = () => {
           border: "2px solid #f57c00",
           borderRadius: "12px",
           padding: "16px",
+          width: "100%", // Certificar-se de que o calendário use 100% da largura disponível
         }}
       >
         <Calendar

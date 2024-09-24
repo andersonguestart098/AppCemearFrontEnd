@@ -12,7 +12,6 @@ import {
 } from "@mui/material";
 import { useUserContext } from "./UserContext";
 import BalloonIcon from "@mui/icons-material/Cake"; // Ícone de balão
-import CelebrationIcon from "@mui/icons-material/Celebration"; // Ícone de celebração (parece um balão)
 
 interface Birthday {
   id: number;
@@ -71,7 +70,7 @@ const BirthdayCalendar: React.FC = () => {
           cursor: "pointer",
           color: "#000", // Texto preto
           backgroundColor: "#FFCDD2", // Vermelho fraquinho
-          padding: "6px 6px", // Ajustar o padding para caber melhor
+          padding: "4px 6px", // Ajustar o padding para caber melhor
           borderRadius: "3px",
           fontSize: "12px",
           height: "100%", // Aumentar a altura da célula
@@ -138,6 +137,7 @@ const BirthdayCalendar: React.FC = () => {
           border: "2px solid #FFCDD2", // Borda vermelha fraquinha
           borderRadius: "12px",
           padding: "16px",
+          width: "100%", // Certificar-se de que o calendário use 100% da largura disponível
         }}
       >
         <Calendar

@@ -161,6 +161,7 @@ const VacationCalendar: React.FC = () => {
           border: "2px solid #64b5f6",
           borderRadius: "12px",
           padding: "16px",
+          width: "100%", // Certificar-se de que o calendário use 100% da largura disponível
         }}
       >
         <Calendar
@@ -174,6 +175,7 @@ const VacationCalendar: React.FC = () => {
           value={date}
           tileClassName={tileClassName}
           tileContent={tileContent}
+          className="responsive-calendar"
         />
       </Box>
       {tipoUsuario === "admin" && (
