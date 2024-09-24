@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 
-const baseURL = "http://localhost:3001"; // URL da API
+const baseURL = "https://cemear-b549eb196d7c.herokuapp.com"; // URL da API
 
 const useNewPostChecker = (setPosts: (posts: any[]) => void) => {
   const fetchNewPosts = async () => {

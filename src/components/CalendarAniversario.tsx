@@ -72,7 +72,7 @@ const BirthdayCalendar: React.FC = () => {
           color: "#000", // Texto preto
           backgroundColor: "#FFCDD2", // Vermelho fraquinho
           padding: "6px 6px", // Ajustar o padding para caber melhor
-          borderRadius: "8px",
+          borderRadius: "3px",
           fontSize: "12px",
           height: "100%", // Aumentar a altura da célula
           width: "100%", // Garantir que o ícone e o nome se ajustem ao tamanho da célula

@@ -13,16 +13,17 @@ import { useUserContext } from "./components/UserContext";
 import PostForm from "./components/PostForm";
 import PostList from "./components/PostList";
 import CalendarComponent from "./components/Calendar";
-import CalendarAniversario from "./components/CalendarAniversario"; // Novo calendário de aniversários
 import FileUploadComponent from "./components/FileUpload";
 import FileDownloadComponent from "./components/FileDownlod";
+import CalendarAniversario from "./components/CalendarAniversario"; // Importando o calendário de aniversários
+import CalendarFeria from "./components/CalendarFerias"; // Importando o calendário de férias
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import DownloadForOfflineIcon from "@mui/icons-material/DownloadForOffline";
 import PostAddIcon from "@mui/icons-material/PostAdd";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
-import NavBar from "./components/NavBar";
 import Register from "./components/RegisterUser";
+import NavBar from "./components/NavBar";
 
 const style = {
   position: "absolute" as "absolute",
@@ -46,51 +47,57 @@ const buttonStyle = {
 const App: React.FC = () => {
   const navigate = useNavigate();
   const [isPostFormOpen, setIsPostFormOpen] = useState(false);
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [selectedCalendar, setSelectedCalendar] = useState<
-    "eventos" | "aniversarios" | "ferias" | null
-  >(null);
   const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
   const [isFileDownloadOpen, setIsFileDownloadOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
-  const { tipoUsuario, setTipoUsuario } = useUserContext();
 
-  // Estado para controlar o menu dropdown
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [calendarType, setCalendarType] = useState<string | null>(null); // Tipo de calendário
+
+  const { tipoUsuario, setTipoUsuario } = useUserContext();
 
   useEffect(() => {
     const storedTipoUsuario = localStorage.getItem("tipoUsuario");
     if (storedTipoUsuario) {
       setTipoUsuario(storedTipoUsuario);
     } else {
-      navigate("/login");
+      navigate("/login"); // Redireciona para o login se o usuário não estiver autenticado
     }
   }, [navigate, setTipoUsuario]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    setTipoUsuario("");
-    navigate("/login");
-  };
+  if (!tipoUsuario) {
+    return <div>Carregando...</div>; // Tela de carregamento
+  }
 
-  const openMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleCalendarClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const closeMenu = () => {
+  const handleCloseMenu = () => {
     setAnchorEl(null);
   };
 
-  const openSelectedCalendar = (
-    calendar: "eventos" | "aniversarios" | "ferias"
-  ) => {
-    setSelectedCalendar(calendar);
+  const openCalendarModal = (type: string) => {
+    setCalendarType(type);
     setIsCalendarOpen(true);
-    closeMenu(); // Fecha o dropdown ao selecionar
+    handleCloseMenu(); // Fechar o menu após escolher o calendário
+  };
+
+  const closeCalendarModal = () => {
+    setIsCalendarOpen(false);
+    setCalendarType(null);
   };
 
   return (
-    <div style={{ padding: "20px", textAlign: "center" }}>
+    <div
+      style={{
+        padding: "20px",
+        textAlign: "center",
+        backgroundColor: "#f2f2f2", // Fundo cinza
+        minHeight: "100vh", // Garante que cubra a tela toda
+      }}
+    >
       <NavBar />
 
       <div
@@ -98,7 +105,7 @@ const App: React.FC = () => {
           paddingTop: "40px",
           display: "flex",
           justifyContent: "center",
-          flexWrap: "wrap",
+          flexWrap: "wrap", // Se necessário, permite que os botões se reagrupem em outra linha
         }}
       >
         {tipoUsuario === "admin" ? (
@@ -108,53 +115,51 @@ const App: React.FC = () => {
               color="primary"
               onClick={() => setIsPostFormOpen(true)}
             >
-              <PostAddIcon style={{ fontSize: 36 }} />
+              <PostAddIcon style={{ fontSize: 36 }} /> {/* Ícone maior */}
             </IconButton>
             <IconButton
               style={buttonStyle}
               color="success"
               onClick={() => setIsFileUploadOpen(true)}
             >
-              <UploadFileIcon style={{ fontSize: 36 }} />
+              <UploadFileIcon style={{ fontSize: 36 }} /> {/* Ícone maior */}
             </IconButton>
             <IconButton
               style={buttonStyle}
               color="warning"
               onClick={() => setIsFileDownloadOpen(true)}
             >
-              <DownloadForOfflineIcon style={{ fontSize: 36 }} />
+              <DownloadForOfflineIcon style={{ fontSize: 36 }} />{" "}
+              {/* Ícone maior */}
             </IconButton>
             <IconButton
               style={buttonStyle}
               color="info"
               onClick={() => setIsRegisterOpen(true)}
             >
-              <PersonAddIcon style={{ fontSize: 36 }} />
+              <PersonAddIcon style={{ fontSize: 36 }} /> {/* Ícone maior */}
             </IconButton>
-
-            {/* Botão que abre o menu de seleção de calendários */}
+            {/* Botão com menu dropdown para selecionar os calendários */}
             <IconButton
               style={buttonStyle}
               color="secondary"
-              onClick={openMenu}
+              onClick={handleCalendarClick}
             >
               <CalendarTodayIcon style={{ fontSize: 36 }} />
             </IconButton>
-
-            {/* Menu de seleção de calendários */}
             <Menu
               anchorEl={anchorEl}
               open={Boolean(anchorEl)}
-              onClose={closeMenu}
+              onClose={handleCloseMenu}
             >
-              <MenuItem onClick={() => openSelectedCalendar("eventos")}>
-                Calendário Eventos
+              <MenuItem onClick={() => openCalendarModal("Eventos")}>
+                Calendário de Eventos
               </MenuItem>
-              <MenuItem onClick={() => openSelectedCalendar("ferias")}>
-                Calendário Férias
+              <MenuItem onClick={() => openCalendarModal("Férias")}>
+                Calendário de Férias
               </MenuItem>
-              <MenuItem onClick={() => openSelectedCalendar("aniversarios")}>
-                Calendário Aniversários
+              <MenuItem onClick={() => openCalendarModal("Aniversários")}>
+                Calendário de Aniversários
               </MenuItem>
             </Menu>
           </>
@@ -163,21 +168,38 @@ const App: React.FC = () => {
             <IconButton
               style={buttonStyle}
               color="secondary"
-              onClick={() => openMenu}
+              onClick={handleCalendarClick}
             >
-              <CalendarTodayIcon style={{ fontSize: 36 }} />
+              <CalendarTodayIcon style={{ fontSize: 36 }} /> {/* Ícone maior */}
             </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleCloseMenu}
+            >
+              <MenuItem onClick={() => openCalendarModal("Eventos")}>
+                Calendário de Eventos
+              </MenuItem>
+              <MenuItem onClick={() => openCalendarModal("Férias")}>
+                Calendário de Férias
+              </MenuItem>
+              <MenuItem onClick={() => openCalendarModal("Aniversários")}>
+                Calendário de Aniversários
+              </MenuItem>
+            </Menu>
             <IconButton
               style={buttonStyle}
               color="warning"
               onClick={() => setIsFileDownloadOpen(true)}
             >
-              <DownloadForOfflineIcon style={{ fontSize: 36 }} />
+              <DownloadForOfflineIcon style={{ fontSize: 36 }} />{" "}
+              {/* Ícone maior */}
             </IconButton>
           </>
         ) : null}
       </div>
 
+      {/* Renderizar a lista de posts para todos os usuários */}
       <PostList />
 
       {/* Modals */}
@@ -187,15 +209,15 @@ const App: React.FC = () => {
         </Box>
       </Modal>
 
-      {/* Modal de calendário com base na seleção */}
-      <Modal open={isCalendarOpen} onClose={() => setIsCalendarOpen(false)}>
+      {/* Modal para os calendários com base na opção selecionada */}
+      <Modal open={isCalendarOpen} onClose={closeCalendarModal}>
         <Box sx={style}>
-          {selectedCalendar === "eventos" && <CalendarComponent />}
-          {selectedCalendar === "aniversarios" && <CalendarAniversario />}
-          {/* Vamos adicionar o componente do calendário de férias quando criarmos */}
+          {calendarType === "Eventos" && <CalendarComponent />}
+          {calendarType === "Férias" && <CalendarFeria />}
+          {calendarType === "Aniversários" && <CalendarAniversario />}
           <Button
             variant="outlined"
-            onClick={() => setIsCalendarOpen(false)}
+            onClick={closeCalendarModal}
             style={{ marginTop: "10px" }}
           >
             Fechar

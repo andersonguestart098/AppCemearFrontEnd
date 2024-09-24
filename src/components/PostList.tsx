@@ -338,6 +338,39 @@ const PostList: React.FC = () => {
                 </ListItem>
               );
             })}
+        <Dialog
+          open={Boolean(openImageDialog)}
+          onClose={handleCloseImageDialog}
+          maxWidth="lg"
+          fullWidth
+        >
+          <DialogContent
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: 0, // Remove o padding do conteúdo
+              backgroundColor: "#000", // Define um fundo escuro para destacar a imagem
+            }}
+          >
+            {openImageDialog && (
+              <img
+                src={openImageDialog}
+                alt="Fullscreen"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "90vh", // Limita a altura para caber na tela
+                  objectFit: "contain", // Mantém a proporção da imagem
+                }}
+              />
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseImageDialog} color="primary">
+              Fechar
+            </Button>
+          </DialogActions>
+        </Dialog>
       </List>
 
       <Box
