@@ -58,11 +58,19 @@ const App: React.FC = () => {
   const { tipoUsuario, setTipoUsuario } = useUserContext();
 
   useEffect(() => {
-    const storedTipoUsuario = localStorage.getItem("tipoUsuario");
-    if (storedTipoUsuario) {
-      setTipoUsuario(storedTipoUsuario);
+    // Verifica se o token de autenticação existe no localStorage
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      const storedTipoUsuario = localStorage.getItem("tipoUsuario");
+      if (storedTipoUsuario) {
+        setTipoUsuario(storedTipoUsuario);
+      } else {
+        setTipoUsuario("user"); // Tipo de usuário padrão se não estiver salvo
+      }
     } else {
-      navigate("/login"); // Redireciona para o login se o usuário não estiver autenticado
+      // Se não houver token, redireciona para a tela de login
+      navigate("/login");
     }
   }, [navigate, setTipoUsuario]);
 

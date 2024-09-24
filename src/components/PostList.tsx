@@ -155,7 +155,7 @@ const PostList: React.FC = () => {
   };
 
   return (
-    <Box padding={2} sx={{ backgroundColor: "#F3F3F3" }}>
+    <Box padding={2}>
       <Typography
         variant="h6"
         gutterBottom
