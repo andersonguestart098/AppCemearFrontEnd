@@ -113,10 +113,33 @@ const CalendarComponent: React.FC = () => {
 
   return (
     <Container maxWidth="sm">
-      <Box textAlign="center" mb={4}>
+      <Box
+        textAlign="center"
+        mb={4}
+        style={{
+          maxHeight: "80vh", // Limita a altura a 80% da tela
+          overflowY: "auto", // Permite scroll vertical
+          padding: "20px", // Adiciona padding interno
+          position: "relative", // Necessário para o posicionamento do botão de fechar
+        }}
+      >
         <Typography variant="h4" gutterBottom sx={{ color: "#1565c0" }}>
           Calendário Cemear
         </Typography>
+        <button
+          onClick={handleClose}
+          style={{
+            position: "absolute",
+            top: "10px",
+            right: "10px",
+            backgroundColor: "transparent",
+            border: "none",
+            fontSize: "24px",
+            cursor: "pointer",
+          }}
+        >
+          &times;
+        </button>
       </Box>
       <Box
         display="flex"
