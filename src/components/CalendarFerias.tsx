@@ -10,9 +10,7 @@ import {
   Box,
   Popover,
   Grid,
-  IconButton,
 } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close"; // Importando o ícone de fechar
 import BeachAccessIcon from "@mui/icons-material/BeachAccess"; // Ícone de férias
 import { useUserContext } from "./UserContext";
 
@@ -33,7 +31,6 @@ const VacationCalendar: React.FC = () => {
   const [selectedVacation, setSelectedVacation] = useState<Vacation | null>(
     null
   );
-
   const { tipoUsuario } = useUserContext();
 
   // Função para adicionar um registro de férias
@@ -148,23 +145,33 @@ const VacationCalendar: React.FC = () => {
 
   return (
     <Container maxWidth="sm">
-      {/* Ícone de fechar no canto superior direito */}
-      <IconButton
-        onClick={handleClose} // Ação de fechar o calendário
-        sx={{
-          position: "absolute",
-          top: "10px",
-          right: "10px",
-          zIndex: 10,
-          backgroundColor: "#fff",
+      <Box
+        textAlign="center"
+        mb={4}
+        style={{
+          maxHeight: "80vh", // Limita a altura a 80% da tela
+          overflowY: "auto", // Permite scroll vertical
+          padding: "20px", // Adiciona padding interno
+          position: "relative", // Necessário para o posicionamento do botão de fechar
         }}
       >
-        <CloseIcon />
-      </IconButton>
-      <Box textAlign="center" mb={4}>
         <Typography variant="h4" gutterBottom sx={{ color: "#1565c0" }}>
           Calendário de Férias
         </Typography>
+        <button
+          onClick={handleClose}
+          style={{
+            position: "absolute",
+            top: "10px",
+            right: "10px",
+            backgroundColor: "transparent",
+            border: "none",
+            fontSize: "24px",
+            cursor: "pointer",
+          }}
+        >
+          &times;
+        </button>
       </Box>
       <Box
         display="flex"
