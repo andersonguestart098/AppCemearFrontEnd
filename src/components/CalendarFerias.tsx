@@ -10,7 +10,9 @@ import {
   Box,
   Popover,
   Grid,
+  IconButton,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close"; // Importando o ícone de fechar
 import BeachAccessIcon from "@mui/icons-material/BeachAccess"; // Ícone de férias
 import { useUserContext } from "./UserContext";
 
@@ -146,6 +148,19 @@ const VacationCalendar: React.FC = () => {
 
   return (
     <Container maxWidth="sm">
+      {/* Ícone de fechar no canto superior direito */}
+      <IconButton
+        onClick={handleClose} // Ação de fechar o calendário
+        sx={{
+          position: "absolute",
+          top: "10px",
+          right: "10px",
+          zIndex: 10,
+          backgroundColor: "#fff",
+        }}
+      >
+        <CloseIcon />
+      </IconButton>
       <Box textAlign="center" mb={4}>
         <Typography variant="h4" gutterBottom sx={{ color: "#1565c0" }}>
           Calendário de Férias
@@ -161,7 +176,6 @@ const VacationCalendar: React.FC = () => {
           border: "2px solid #64b5f6",
           borderRadius: "12px",
           padding: "16px",
-          width: "100%", // Certificar-se de que o calendário use 100% da largura disponível
         }}
       >
         <Calendar
@@ -175,7 +189,6 @@ const VacationCalendar: React.FC = () => {
           value={date}
           tileClassName={tileClassName}
           tileContent={tileContent}
-          className="responsive-calendar"
         />
       </Box>
       {tipoUsuario === "admin" && (
