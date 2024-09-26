@@ -1,157 +1,150 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import io from "socket.io-client";
 import {
   List,
   ListItem,
   Card,
   Typography,
   Box,
-  Button,
   IconButton,
+  TextField,
+  Button,
+  Popover,
   Menu,
   MenuItem,
-  TextField,
-  Dialog,
-  DialogContent,
-  DialogActions,
-  Skeleton,
 } from "@mui/material";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
-import DownloadIcon from "@mui/icons-material/Download"; // Ícone para download
-import CloseIcon from "@mui/icons-material/Close";
+import CommentIcon from "@mui/icons-material/Comment";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline"; // Ícone para mostrar todos os comentários
+import ThumbUpIcon from "@mui/icons-material/ThumbUp";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import SentimentSatisfiedAltIcon from "@mui/icons-material/SentimentSatisfiedAlt";
+import PeopleIcon from "@mui/icons-material/People"; // Ícone de pessoas para mostrar as reações
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import useNewPostChecker from "../useNewPostChecker";
-import { useUserContext } from "./UserContext"; // Supondo que você esteja utilizando um contexto para identificar o tipo de usuário
 
-// URL base do Heroku
 const baseURL = "https://cemear-b549eb196d7c.herokuapp.com";
-
-// Conectar ao Socket.IO
-const socket = io(baseURL, {
-  path: "/socket.io",
-});
 
 const PostList: React.FC = () => {
   const [posts, setPosts] = useState<any[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [postsPerPage] = useState(20);
+  const [comments, setComments] = useState<{ [postId: string]: any[] }>({});
+  const [newComment, setNewComment] = useState<string>("");
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null); // Para o Popover de comentários
+  const [popoverPost, setPopoverPost] = useState<any>(null); // Guarda os comentários do post no Popover
+  const [reactionAnchorEl, setReactionAnchorEl] = useState<null | HTMLElement>(
+    null
+  ); // Para o popover das reações
+  const [selectedReactionPost, setSelectedReactionPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedPost, setSelectedPost] = useState<string | null>(null);
-  const [editingPostId, setEditingPostId] = useState<string | null>(null);
-  const [editedTitulo, setEditedTitulo] = useState<string>("");
-  const [editedConteudo, setEditedConteudo] = useState<string>("");
-  const [openImageDialog, setOpenImageDialog] = useState<string | null>(null);
-
-  const { tipoUsuario } = useUserContext(); // Usando o contexto para obter o tipo de usuário
-
-  const indexOfLastPost = currentPage * postsPerPage;
-  const indexOfFirstPost = indexOfLastPost - postsPerPage;
-  const currentPosts = posts.slice(indexOfFirstPost, indexOfLastPost);
-
-  useNewPostChecker(setPosts);
 
   useEffect(() => {
     const fetchPosts = async () => {
       try {
         const response = await axios.get(`${baseURL}/posts`);
         setPosts(response.data);
+        // Busca comentários para todos os posts
+        response.data.forEach((post: any) => fetchComments(post.id));
       } catch (error) {
         toast.error("Erro ao buscar postagens");
       } finally {
         setLoading(false);
       }
     };
-
     fetchPosts();
-
-    // Configuração de Socket.IO para novos posts
-    socket.on("new-post", (newPost) => {
-      if (newPost && newPost.titulo && newPost.conteudo) {
-        setPosts((prevPosts) => [newPost, ...prevPosts]);
-        toast.info(`Novo post adicionado: ${newPost.titulo}`);
-      }
-    });
-
-    return () => {
-      socket.off("new-post");
-    };
   }, []);
 
-  const handleClick = (
-    event: React.MouseEvent<HTMLButtonElement>,
+  const fetchComments = async (postId: string) => {
+    try {
+      const response = await axios.get(`${baseURL}/posts/${postId}/comments`);
+      setComments((prevComments) => ({
+        ...prevComments,
+        [postId]: response.data,
+      }));
+    } catch (error) {
+      console.error("Erro ao buscar comentários:", error);
+    }
+  };
+
+  const handleCommentIconClick = (postId: string) => {
+    setSelectedPostId(postId === selectedPostId ? null : postId);
+  };
+
+  const handleAddComment = async (postId: string) => {
+    const token = localStorage.getItem("token");
+
+    try {
+      await axios.post(
+        `${baseURL}/posts/${postId}/comments`,
+        { content: newComment },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      fetchComments(postId); // Atualiza os comentários após adicionar
+      setNewComment(""); // Limpa o campo de comentário
+      toast.success("Comentário adicionado com sucesso!");
+      setSelectedPostId(null); // Fecha o campo de comentário após adicionar
+    } catch (error) {
+      console.error("Erro ao adicionar comentário:", error);
+      toast.error("Erro ao adicionar comentário.");
+    }
+  };
+
+  const handleShowAllComments = (
+    event: React.MouseEvent<HTMLElement>,
+    post: any
+  ) => {
+    setAnchorEl(event.currentTarget); // Mostra o Popover ao clicar no ícone de "+"
+    setPopoverPost(post); // Guarda os comentários do post no Popover
+  };
+
+  const handleClosePopover = () => {
+    setAnchorEl(null); // Fecha o Popover
+    setPopoverPost(null);
+  };
+
+  const handleReactionClick = (
+    event: React.MouseEvent<HTMLElement>,
     postId: string
   ) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedPost(postId);
+    setSelectedPostId(postId);
+    setReactionAnchorEl(event.currentTarget);
+    localStorage.setItem("selectedPostId", postId);
   };
 
-  const handleClose = () => {
-    setAnchorEl(null);
-    setSelectedPost(null);
-  };
-
-  const handleEdit = (postId: string, titulo: string, conteudo: string) => {
-    setEditingPostId(postId);
-    setEditedTitulo(titulo);
-    setEditedConteudo(conteudo);
-    handleClose();
-  };
-
-  const handleSaveEdit = async (postId: string) => {
+  const handleReaction = async (type: string) => {
+    const postId = localStorage.getItem("selectedPostId");
+    if (!postId) {
+      toast.error("Post não selecionado para reação.");
+      return;
+    }
     try {
-      await axios.put(`${baseURL}/posts/${postId}`, {
-        titulo: editedTitulo,
-        conteudo: editedConteudo,
-      });
-
-      setPosts((prevPosts) =>
-        prevPosts.map((post) =>
-          post.id === postId
-            ? { ...post, titulo: editedTitulo, conteudo: editedConteudo }
-            : post
-        )
+      const token = localStorage.getItem("token");
+      await axios.post(
+        `${baseURL}/posts/${postId}/reaction`,
+        { type },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
-      setEditingPostId(null);
-      toast.success("Post editado com sucesso!");
+      toast.success(`Reação ${type} adicionada com sucesso!`);
     } catch (error) {
-      toast.error("Erro ao editar post");
+      toast.error("Erro ao processar reação.");
     }
   };
 
-  const handleDelete = async () => {
-    if (selectedPost) {
-      try {
-        await axios.delete(`${baseURL}/posts/${selectedPost}`);
-        setPosts(posts.filter((post) => post.id !== selectedPost));
-        toast.success("Post deletado com sucesso!");
-        handleClose();
-      } catch (error) {
-        toast.error("Erro ao deletar post");
-      }
-    }
+  const countReactions = (postReactions: any[], type: string) => {
+    if (!postReactions) return 0;
+    return postReactions.filter((reaction) => reaction.type === type).length;
   };
 
-  const handlePreviousPage = () => {
-    setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
-  };
-
-  const handleNextPage = () => {
-    if (currentPage * postsPerPage < posts.length) {
-      setCurrentPage((prevPage) => prevPage + 1);
-    }
-  };
-
-  const handleImageClick = (imagePath: string) => {
-    setOpenImageDialog(imagePath);
-  };
-
-  const handleCloseImageDialog = () => {
-    setOpenImageDialog(null);
+  const handleCloseReactionPopover = () => {
+    setReactionAnchorEl(null);
+    setSelectedReactionPost(null);
   };
 
   return (
@@ -164,239 +157,204 @@ const PostList: React.FC = () => {
         Postagens
       </Typography>
       <List>
-        {loading
-          ? Array.from(new Array(postsPerPage)).map((_, index) => (
-              <ListItem key={index} sx={{ padding: "20px" }}>
+        {loading ? (
+          <div>Carregando...</div>
+        ) : (
+          posts.map((post) => {
+            const postComments = comments[post.id] || [];
+
+            return (
+              <ListItem key={post.id} sx={{ padding: "20px" }}>
                 <Card
                   variant="outlined"
                   sx={{
                     width: "100%",
                     borderRadius: "12px",
-                    border: "2px solid #e0e0e0",
+                    border: "2px solid #FF9D12",
                     boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
                     padding: "16px",
-                    position: "relative",
                     backgroundColor: "#ffffff",
                   }}
                 >
-                  <Skeleton variant="text" width="40%" height={40} />
-                  <Skeleton
-                    variant="rectangular"
-                    width="100%"
-                    height={200}
-                    sx={{ marginY: 2 }}
-                  />
-                  <Skeleton variant="text" width="60%" />
-                </Card>
-              </ListItem>
-            ))
-          : currentPosts.map((post) => {
-              if (!post || !post.titulo || !post.conteudo) {
-                return null;
-              }
-
-              return (
-                <ListItem key={post.id} sx={{ padding: "20px" }}>
-                  <Card
-                    variant="outlined"
+                  <Typography
+                    variant="h5"
                     sx={{
-                      width: "100%",
-                      borderRadius: "12px",
-                      border: "2px solid #FF9D12",
-                      boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-                      padding: "16px",
-                      backgroundColor: "#ffffff",
+                      fontWeight: "bold",
+                      color: "#0B68A9",
+                      padding: "10px",
                     }}
                   >
-                    <Typography
-                      variant="h5"
+                    {post.titulo}
+                  </Typography>
+
+                  {/* Exibe a imagem do post, se houver */}
+                  {post.imagePath && (
+                    <Box
                       sx={{
-                        fontWeight: "bold",
-                        color: "#0B68A9",
-                        padding: "10px",
+                        marginBottom: "16px",
+                        cursor: "pointer",
+                        textAlign: "center",
+                        height: "350px",
+                        width: "100%",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        overflow: "hidden",
                       }}
                     >
-                      {post.titulo}
-                    </Typography>
-
-                    {post.imagePath && (
-                      <Box
-                        sx={{
-                          marginBottom: "16px",
-                          cursor: "pointer",
-                          textAlign: "center",
-                          height: "350px",
+                      <img
+                        src={post.imagePath}
+                        alt={post.titulo}
+                        style={{
                           width: "100%",
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center",
-                          overflow: "hidden",
+                          height: "auto",
+                          maxHeight: "350px",
+                          objectFit: "cover",
+                          borderRadius: "8px",
                         }}
-                        onClick={() => handleImageClick(post.imagePath)}
+                      />
+                    </Box>
+                  )}
+
+                  <Typography
+                    variant="body1"
+                    sx={{ color: "#555", marginTop: "8px" }}
+                  >
+                    {post.conteudo}
+                  </Typography>
+
+                  <Typography
+                    variant="caption"
+                    sx={{ color: "#333", marginTop: "8px", fontSize: "14px" }}
+                  >
+                    {new Date(post.created_at).toLocaleString()}
+                  </Typography>
+
+                  {/* Exibe o último comentário diretamente no card */}
+                  <Box mt={2}>
+                    <Typography variant="subtitle2">
+                      Último comentário:
+                      {postComments.length > 0
+                        ? `${
+                            postComments[postComments.length - 1].user.usuario
+                          }: ${postComments[postComments.length - 1].content}`
+                        : " Sem comentários ainda"}
+                    </Typography>
+                    {/* Ícone "+" para mostrar todos os comentários */}
+                    {postComments.length > 0 && (
+                      <IconButton
+                        onClick={(event) => handleShowAllComments(event, post)}
                       >
-                        <img
-                          src={`${post.imagePath}`}
-                          alt={post.titulo}
-                          style={{
-                            width: "100%",
-                            height: "auto",
-                            maxHeight: "350px",
-                            objectFit: "cover",
-                            borderRadius: "8px",
-                          }}
-                        />
-                      </Box>
+                        <AddCircleOutlineIcon />
+                      </IconButton>
                     )}
+                  </Box>
 
-                    <Typography
-                      variant="body1"
-                      sx={{ color: "#555", marginTop: "8px" }}
+                  {/* Ícone para abrir o campo de comentário */}
+                  <IconButton onClick={() => handleCommentIconClick(post.id)}>
+                    <CommentIcon />
+                  </IconButton>
+
+                  {/* Campo para adicionar comentário, visível apenas para o post selecionado */}
+                  {selectedPostId === post.id && (
+                    <Box mt={2}>
+                      <TextField
+                        label="Adicionar comentário"
+                        fullWidth
+                        multiline
+                        rows={2}
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                      />
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => handleAddComment(post.id)}
+                        sx={{ marginTop: "10px" }}
+                      >
+                        Comentar
+                      </Button>
+                    </Box>
+                  )}
+
+                  {/* Ícone de pessoas para mostrar reações */}
+                  <Box
+                    sx={{ display: "flex", alignItems: "center", marginTop: 2 }}
+                  >
+                    <IconButton
+                      onClick={(event) => handleReactionClick(event, post.id)}
                     >
-                      {post.conteudo}
-                    </Typography>
+                      <PeopleIcon sx={{ color: "#FF9D12" }} />
+                    </IconButton>
                     <Typography
-                      variant="caption"
-                      sx={{ color: "#333", marginTop: "8px", fontSize: "14px" }}
+                      variant="body2"
+                      sx={{ marginLeft: "8px", color: "#333" }}
                     >
-                      {new Date(post.created_at).toLocaleString()}
+                      👍 {countReactions(post.reactions, "like")} ❤️{" "}
+                      {countReactions(post.reactions, "love")} 😂{" "}
+                      {countReactions(post.reactions, "haha")}
                     </Typography>
-
-                    {/* O menu de edição e exclusão só aparecerá para administradores */}
-                    {tipoUsuario === "admin" && (
-                      <>
-                        <IconButton
-                          onClick={(event) => handleClick(event, post.id)}
-                          sx={{
-                            position: "absolute",
-                            top: "16px",
-                            right: "16px",
-                          }}
-                        >
-                          <MoreVertIcon />
-                        </IconButton>
-
-                        <Menu
-                          anchorEl={anchorEl}
-                          open={Boolean(anchorEl) && selectedPost === post.id}
-                          onClose={handleClose}
-                        >
-                          <MenuItem
-                            onClick={() =>
-                              handleEdit(post.id, post.titulo, post.conteudo)
-                            }
-                          >
-                            <EditIcon sx={{ marginRight: "8px" }} />
-                            Editar
-                          </MenuItem>
-                          <MenuItem onClick={handleDelete}>
-                            <DeleteIcon sx={{ marginRight: "8px" }} />
-                            Excluir
-                          </MenuItem>
-                        </Menu>
-                      </>
-                    )}
-
-                    {/* Edição in-line */}
-                    {editingPostId === post.id && (
-                      <Box sx={{ marginTop: "16px" }}>
-                        <TextField
-                          label="Título"
-                          variant="outlined"
-                          fullWidth
-                          value={editedTitulo}
-                          onChange={(e) => setEditedTitulo(e.target.value)}
-                          sx={{ marginBottom: "10px" }}
-                        />
-                        <TextField
-                          label="Conteúdo"
-                          variant="outlined"
-                          fullWidth
-                          multiline
-                          rows={4}
-                          value={editedConteudo}
-                          onChange={(e) => setEditedConteudo(e.target.value)}
-                          sx={{ marginBottom: "10px" }}
-                        />
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          onClick={() => handleSaveEdit(post.id)}
-                        >
-                          Salvar
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          color="secondary"
-                          onClick={() => setEditingPostId(null)}
-                          sx={{ marginLeft: "10px" }}
-                        >
-                          Cancelar
-                        </Button>
-                      </Box>
-                    )}
-                  </Card>
-                </ListItem>
-              );
-            })}
-        <Dialog
-          open={Boolean(openImageDialog)}
-          onClose={handleCloseImageDialog}
-          maxWidth="lg"
-          fullWidth
-        >
-          <DialogContent
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              padding: 0, // Remove o padding do conteúdo
-              backgroundColor: "#000", // Define um fundo escuro para destacar a imagem
-            }}
-          >
-            {openImageDialog && (
-              <img
-                src={openImageDialog}
-                alt="Fullscreen"
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "90vh", // Limita a altura para caber na tela
-                  objectFit: "contain", // Mantém a proporção da imagem
-                }}
-              />
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseImageDialog} color="primary">
-              Fechar
-            </Button>
-          </DialogActions>
-        </Dialog>
+                  </Box>
+                </Card>
+              </ListItem>
+            );
+          })
+        )}
       </List>
 
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginTop: "20px",
+      {/* Popover para exibir todos os comentários */}
+      <Popover
+        open={Boolean(anchorEl)}
+        anchorEl={anchorEl}
+        onClose={handleClosePopover}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "left",
         }}
       >
-        <Button
-          variant="outlined"
-          onClick={handlePreviousPage}
-          disabled={currentPage === 1}
-          sx={{ borderColor: "#0B68A9", color: "#0B68A9" }}
-        >
-          Anterior
-        </Button>
-        <Button
-          variant="outlined"
-          onClick={handleNextPage}
-          disabled={currentPage * postsPerPage >= posts.length}
-          sx={{ borderColor: "#0B68A9", color: "#0B68A9" }}
-        >
-          Próximo
-        </Button>
-      </Box>
+        <Box sx={{ padding: 2 }}>
+          <Typography variant="h6">Todos os comentários</Typography>
+          {popoverPost &&
+          popoverPost.id &&
+          comments[popoverPost.id].length > 0 ? (
+            comments[popoverPost.id].map((comment: any, index: any) => (
+              <Typography key={index}>
+                {comment.user
+                  ? `${comment.user.usuario}: ${comment.content}`
+                  : "Usuário desconhecido"}
+              </Typography>
+            ))
+          ) : (
+            <Typography>Nenhum comentário disponível</Typography>
+          )}
+        </Box>
+      </Popover>
+
+      {/* Popover para exibir quem reagiu */}
+      <Popover
+        open={Boolean(reactionAnchorEl)}
+        anchorEl={reactionAnchorEl}
+        onClose={handleCloseReactionPopover}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "left",
+        }}
+      >
+        <Box sx={{ padding: 2 }}>
+          <Typography variant="h6">Reações</Typography>
+          {selectedReactionPost && selectedReactionPost.reactions.length > 0 ? (
+            selectedReactionPost.reactions.map((reaction: any, index: any) => (
+              <Typography key={index}>
+                {reaction.user
+                  ? `${reaction.user.usuario} reagiu com ${reaction.type}`
+                  : "Usuário desconhecido"}
+              </Typography>
+            ))
+          ) : (
+            <Typography>Nenhuma reação</Typography>
+          )}
+        </Box>
+      </Popover>
 
       <ToastContainer />
     </Box>
