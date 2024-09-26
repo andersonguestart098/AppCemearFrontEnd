@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import io from "socket.io-client"; // Importar o Socket.IO
 import {
   List,
   ListItem,
@@ -10,22 +11,28 @@ import {
   TextField,
   Button,
   Popover,
-  Menu,
-  MenuItem,
+  Dialog,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import CommentIcon from "@mui/icons-material/Comment";
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline"; // Ícone para mostrar todos os comentários
-import ThumbUpIcon from "@mui/icons-material/ThumbUp";
-import FavoriteIcon from "@mui/icons-material/Favorite";
-import SentimentSatisfiedAltIcon from "@mui/icons-material/SentimentSatisfiedAlt";
-import PeopleIcon from "@mui/icons-material/People"; // Ícone de pessoas para mostrar as reações
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import PeopleIcon from "@mui/icons-material/People";
+import CloseIcon from "@mui/icons-material/Close";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+// URL base do Heroku
 const baseURL = "https://cemear-b549eb196d7c.herokuapp.com";
+
+// Conectar ao Socket.IO usando a URL do Heroku
+const socket = io(baseURL, {
+  path: "/socket.io", // Caminho correto para o Socket.IO
+});
 
 const PostList: React.FC = () => {
   const [posts, setPosts] = useState<any[]>([]);
+  const [openImageDialog, setOpenImageDialog] = useState<string | null>(null);
   const [comments, setComments] = useState<{ [postId: string]: any[] }>({});
   const [newComment, setNewComment] = useState<string>("");
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -34,23 +41,44 @@ const PostList: React.FC = () => {
   const [reactionAnchorEl, setReactionAnchorEl] = useState<null | HTMLElement>(
     null
   ); // Para o popover das reações
-  const [selectedReactionPost, setSelectedReactionPost] = useState<any>(null);
+  const [selectedReactionPost, setSelectedReactionPost] = useState<any>(null); // Guarda o post para exibir reações
   const [loading, setLoading] = useState(true);
 
+  // Função para buscar os posts
+  const fetchPosts = async () => {
+    try {
+      const response = await axios.get(`${baseURL}/posts`);
+      setPosts(response.data);
+      response.data.forEach((post: any) => fetchComments(post.id));
+    } catch (error) {
+      toast.error("Erro ao buscar postagens");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Efeito para buscar posts e conectar o Socket.IO
   useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const response = await axios.get(`${baseURL}/posts`);
-        setPosts(response.data);
-        // Busca comentários para todos os posts
-        response.data.forEach((post: any) => fetchComments(post.id));
-      } catch (error) {
-        toast.error("Erro ao buscar postagens");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchPosts();
+
+    // Configura a conexão ao Socket.IO para ouvir por novos posts
+    socket.on("new-post", (newPost) => {
+      // Corrige o problema ao garantir que posts com imagem e sem imagem sejam tratados
+      if (newPost.imagePath) {
+        // Quando o post possui uma imagem
+        setPosts((prevPosts) => [newPost, ...prevPosts]);
+        toast.info("Novo post com imagem adicionado!");
+      } else {
+        // Quando o post não possui uma imagem
+        setPosts((prevPosts) => [newPost, ...prevPosts]);
+        toast.info("Novo post sem imagem adicionado!");
+      }
+    });
+
+    // Limpeza da conexão do Socket.IO ao desmontar o componente
+    return () => {
+      socket.off("new-post");
+    };
   }, []);
 
   const fetchComments = async (postId: string) => {
@@ -107,34 +135,15 @@ const PostList: React.FC = () => {
 
   const handleReactionClick = (
     event: React.MouseEvent<HTMLElement>,
-    postId: string
+    post: any
   ) => {
-    setSelectedPostId(postId);
     setReactionAnchorEl(event.currentTarget);
-    localStorage.setItem("selectedPostId", postId);
+    setSelectedReactionPost(post); // Guarda o post cujas reações serão exibidas
   };
 
-  const handleReaction = async (type: string) => {
-    const postId = localStorage.getItem("selectedPostId");
-    if (!postId) {
-      toast.error("Post não selecionado para reação.");
-      return;
-    }
-    try {
-      const token = localStorage.getItem("token");
-      await axios.post(
-        `${baseURL}/posts/${postId}/reaction`,
-        { type },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      toast.success(`Reação ${type} adicionada com sucesso!`);
-    } catch (error) {
-      toast.error("Erro ao processar reação.");
-    }
+  const handleCloseReactionPopover = () => {
+    setReactionAnchorEl(null);
+    setSelectedReactionPost(null);
   };
 
   const countReactions = (postReactions: any[], type: string) => {
@@ -142,9 +151,12 @@ const PostList: React.FC = () => {
     return postReactions.filter((reaction) => reaction.type === type).length;
   };
 
-  const handleCloseReactionPopover = () => {
-    setReactionAnchorEl(null);
-    setSelectedReactionPost(null);
+  const handleImageClick = (imagePath: string) => {
+    setOpenImageDialog(imagePath); // Armazena a URL da imagem ao clicar
+  };
+
+  const handleCloseImageDialog = () => {
+    setOpenImageDialog(null); // Fecha o Dialog ao clicar fora ou no botão de fechar
   };
 
   return (
@@ -190,6 +202,7 @@ const PostList: React.FC = () => {
                   {/* Exibe a imagem do post, se houver */}
                   {post.imagePath && (
                     <Box
+                      onClick={() => handleImageClick(post.imagePath)} // Ao clicar na imagem, abre o Dialog
                       sx={{
                         marginBottom: "16px",
                         cursor: "pointer",
@@ -240,6 +253,17 @@ const PostList: React.FC = () => {
                           }: ${postComments[postComments.length - 1].content}`
                         : " Sem comentários ainda"}
                     </Typography>
+                  </Box>
+
+                  {/* Alinhando todos os ícones na horizontal */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-around", // Para alinhar os ícones na horizontal
+                      marginTop: 2,
+                    }}
+                  >
                     {/* Ícone "+" para mostrar todos os comentários */}
                     {postComments.length > 0 && (
                       <IconButton
@@ -248,12 +272,26 @@ const PostList: React.FC = () => {
                         <AddCircleOutlineIcon />
                       </IconButton>
                     )}
-                  </Box>
 
-                  {/* Ícone para abrir o campo de comentário */}
-                  <IconButton onClick={() => handleCommentIconClick(post.id)}>
-                    <CommentIcon />
-                  </IconButton>
+                    {/* Ícone para abrir o campo de comentário */}
+                    <IconButton onClick={() => handleCommentIconClick(post.id)}>
+                      <CommentIcon />
+                    </IconButton>
+
+                    {/* Ícone de pessoas para mostrar reações */}
+                    <IconButton
+                      onClick={(event) => handleReactionClick(event, post)}
+                    >
+                      <PeopleIcon sx={{ color: "#FF9D12" }} />
+                    </IconButton>
+
+                    {/* Contagem de reações organizadas */}
+                    <Typography variant="body2" sx={{ color: "#333" }}>
+                      👍 {countReactions(post.reactions, "like")} ❤️{" "}
+                      {countReactions(post.reactions, "love")} 😂{" "}
+                      {countReactions(post.reactions, "haha")}
+                    </Typography>
+                  </Box>
 
                   {/* Campo para adicionar comentário, visível apenas para o post selecionado */}
                   {selectedPostId === post.id && (
@@ -276,25 +314,6 @@ const PostList: React.FC = () => {
                       </Button>
                     </Box>
                   )}
-
-                  {/* Ícone de pessoas para mostrar reações */}
-                  <Box
-                    sx={{ display: "flex", alignItems: "center", marginTop: 2 }}
-                  >
-                    <IconButton
-                      onClick={(event) => handleReactionClick(event, post.id)}
-                    >
-                      <PeopleIcon sx={{ color: "#FF9D12" }} />
-                    </IconButton>
-                    <Typography
-                      variant="body2"
-                      sx={{ marginLeft: "8px", color: "#333" }}
-                    >
-                      👍 {countReactions(post.reactions, "like")} ❤️{" "}
-                      {countReactions(post.reactions, "love")} 😂{" "}
-                      {countReactions(post.reactions, "haha")}
-                    </Typography>
-                  </Box>
                 </Card>
               </ListItem>
             );
@@ -355,6 +374,41 @@ const PostList: React.FC = () => {
           )}
         </Box>
       </Popover>
+
+      {/* Dialog para imagem em tela cheia */}
+      <Dialog
+        open={Boolean(openImageDialog)}
+        onClose={handleCloseImageDialog}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogContent
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 0,
+            backgroundColor: "#000", // Define um fundo escuro para destacar a imagem
+          }}
+        >
+          {openImageDialog && (
+            <img
+              src={openImageDialog}
+              alt="Fullscreen"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "90vh", // Limita a altura para caber na tela
+                objectFit: "contain", // Mantém a proporção da imagem
+              }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseImageDialog} color="primary">
+            Fechar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <ToastContainer />
     </Box>

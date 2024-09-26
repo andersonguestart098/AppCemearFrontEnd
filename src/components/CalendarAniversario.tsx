@@ -30,7 +30,6 @@ const BirthdayCalendar: React.FC = () => {
 
   const { tipoUsuario } = useUserContext();
 
-  // Função para adicionar um aniversariante
   const handleAddBirthday = async () => {
     if (date && name.trim() !== "") {
       const newBirthday = { date: date.toISOString().split("T")[0], name };
@@ -47,12 +46,10 @@ const BirthdayCalendar: React.FC = () => {
     }
   };
 
-  // Função para truncar o nome do aniversariante
   const truncateName = (name: string) => {
     return name.length > 3 ? name.substring(0, 3) + "..." : name;
   };
 
-  // Função para marcar datas com aniversariantes
   const tileClassName = ({ date }: { date: Date }) => {
     const dateString = date.toISOString().split("T")[0];
     return birthdays.some((birthday) => birthday.date === dateString)
@@ -68,23 +65,22 @@ const BirthdayCalendar: React.FC = () => {
         onClick={(e) => handleClick(e, birthday)}
         style={{
           cursor: "pointer",
-          color: "#000", // Texto preto
-          backgroundColor: "#FFCDD2", // Vermelho fraquinho
-          padding: "4px 6px", // Ajustar o padding para caber melhor
+          color: "#000",
+          backgroundColor: "#FFCDD2",
+          padding: "4px 6px",
           borderRadius: "3px",
           fontSize: "12px",
-          height: "100%", // Aumentar a altura da célula
-          width: "100%", // Garantir que o ícone e o nome se ajustem ao tamanho da célula
+          height: "100%",
+          width: "100%",
           display: "flex",
-          flexDirection: "column", // Colocar ícone e nome em colunas
+          flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
           overflow: "hidden",
           textOverflow: "ellipsis",
         }}
       >
-        <BalloonIcon sx={{ color: "red", fontSize: "20px" }} />{" "}
-        {/* Ícone de balão */}
+        <BalloonIcon sx={{ color: "red", fontSize: "20px" }} />
         <span>{truncateName(birthday.name)}</span>
       </div>
     ) : null;
@@ -110,7 +106,7 @@ const BirthdayCalendar: React.FC = () => {
     const fetchBirthdays = async () => {
       try {
         const response = await axios.get(
-          "https://cemear-b549eb196d7c.herokuapp.com/aniversarios" // Endpoint de aniversariantes
+          "https://cemear-b549eb196d7c.herokuapp.com/aniversarios"
         );
         setBirthdays(response.data);
       } catch (error) {
@@ -126,10 +122,10 @@ const BirthdayCalendar: React.FC = () => {
         textAlign="center"
         mb={4}
         style={{
-          maxHeight: "80vh", // Limita a altura a 80% da tela
-          overflowY: "auto", // Permite scroll vertical
-          padding: "20px", // Adiciona padding interno
-          position: "relative", // Necessário para o posicionamento do botão de fechar
+          maxHeight: "80vh",
+          overflowY: "auto",
+          padding: "20px",
+          position: "relative",
         }}
       >
         <Typography variant="h4" gutterBottom sx={{ color: "#1565c0" }}>
@@ -157,10 +153,10 @@ const BirthdayCalendar: React.FC = () => {
         flexDirection="column"
         mb={4}
         sx={{
-          border: "2px solid #FFCDD2", // Borda vermelha fraquinha
+          border: "2px solid #FFCDD2",
           borderRadius: "12px",
           padding: "16px",
-          width: "100%", // Certificar-se de que o calendário use 100% da largura disponível
+          width: "100%",
         }}
       >
         <Calendar
@@ -175,7 +171,6 @@ const BirthdayCalendar: React.FC = () => {
           tileClassName={tileClassName}
           tileContent={tileContent}
           className="responsive-calendar"
-          tileDisabled={({ date }) => date.getDate() === 0} // Desativar as células de datas inválidas
         />
       </Box>
       {tipoUsuario === "admin" && (
@@ -202,7 +197,6 @@ const BirthdayCalendar: React.FC = () => {
         </Box>
       )}
 
-      {/* Popover para mostrar o nome completo do aniversariante */}
       <Popover
         id={id}
         open={open}
