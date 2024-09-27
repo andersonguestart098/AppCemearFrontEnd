@@ -29,6 +29,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { toast, ToastContainer } from "react-toastify";
+import { debounce } from "lodash";
 
 const baseURL = "https://cemear-b549eb196d7c.herokuapp.com";
 const socket = io(baseURL, { path: "/socket.io" });
@@ -95,12 +96,12 @@ const PostList: React.FC = () => {
     });
 
     socket.on("post-reaction-updated", (updatedPost) => {
-      setPosts((prevPosts) =>
-        prevPosts.map((post) =>
+      setPosts((prevPosts) => {
+        const updatedPosts = prevPosts.map((post) =>
           post.id === updatedPost.id ? updatedPost : post
-        )
-      );
-      toast.info("Reação atualizada em um post!");
+        );
+        return updatedPosts;
+      });
     });
 
     return () => {
@@ -109,29 +110,54 @@ const PostList: React.FC = () => {
     };
   }, []);
 
-  // Função para adicionar uma reação ao post
-  const handleReaction = async (reactionType: string) => {
-    if (!selectedReactionPost) return;
-    const token = localStorage.getItem("token");
-
-    try {
-      await axios.post(
-        `${baseURL}/posts/${selectedReactionPost.id}/reaction`,
-        { type: reactionType },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      toast.success(`Reagiu com ${reactionType}!`);
-      handleCloseReactionMenu();
-    } catch (error) {
-      toast.error("Erro ao adicionar reação.");
-    }
-  };
-  // Função para fechar o menu de reações
   const handleCloseReactionMenu = () => {
     setReactionMenuAnchorEl(null);
     setSelectedReactionPost(null);
   };
+
+  const debouncedHandleReaction = useCallback(
+    debounce(async (reactionType: string) => {
+      if (!selectedReactionPost) return;
+      const token = localStorage.getItem("token");
+
+      try {
+        await axios.post(
+          `${baseURL}/posts/${selectedReactionPost.id}/reaction`,
+          { type: reactionType },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        toast.success(`Reagiu com ${reactionType}!`);
+        handleCloseReactionMenu();
+      } catch (error) {
+        toast.error("Erro ao adicionar reação.");
+      }
+    }, 300),
+    [selectedReactionPost] // Limita a execução a cada 300ms
+  );
+
+  // Função para adicionar uma reação ao post
+  // Função para adicionar uma reação ao post
+  const handleReaction = useCallback(
+    async (reactionType: string) => {
+      if (!selectedReactionPost) return;
+      const token = localStorage.getItem("token");
+
+      try {
+        await axios.post(
+          `${baseURL}/posts/${selectedReactionPost.id}/reaction`,
+          { type: reactionType },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        toast.success(`Reagiu com ${reactionType}!`);
+        handleCloseReactionMenu();
+      } catch (error) {
+        toast.error("Erro ao adicionar reação.");
+      }
+    },
+    [selectedReactionPost]
+  ); // Only re-create the function if selectedReactionPost changes
 
   // Função para adicionar um comentário
   const handleAddComment = useCallback(async () => {
@@ -145,15 +171,21 @@ const PostList: React.FC = () => {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
+
+        // Após adicionar o comentário, buscar novamente os comentários atualizados
         const updatedComments = await fetchComments(selectedPostId);
-        setPosts((prev) =>
-          prev.map((post) =>
+
+        // Atualizar os comentários do post
+        setPosts((prevPosts) => {
+          const updatedPosts = prevPosts.map((post) =>
             post.id === selectedPostId
               ? { ...post, comments: updatedComments }
               : post
-          )
-        );
-        setNewComment("");
+          );
+          return updatedPosts;
+        });
+
+        setNewComment(""); // Limpar o campo de comentário após sucesso
       } catch (error) {
         console.error("Erro ao adicionar comentário", error);
       }
@@ -179,7 +211,6 @@ const PostList: React.FC = () => {
     setEditedConteudo(conteudo);
     handleClose();
   };
-
   const handleSaveEdit = async (postId: string) => {
     try {
       await axios.put(`${baseURL}/posts/${postId}`, {
@@ -205,7 +236,9 @@ const PostList: React.FC = () => {
     if (selectedPost) {
       try {
         await axios.delete(`${baseURL}/posts/${selectedPost}`);
-        setPosts(posts.filter((post) => post.id !== selectedPost));
+        setPosts((prevPosts) =>
+          prevPosts.filter((post) => post.id !== selectedPost)
+        );
         toast.success("Post deletado com sucesso!");
         handleClose();
       } catch (error: any) {
@@ -470,7 +503,7 @@ const PostList: React.FC = () => {
       <ReactionMenu
         anchorEl={reactionMenuAnchorEl}
         handleClose={handleCloseReactionMenu}
-        handleReaction={handleReaction}
+        handleReaction={debouncedHandleReaction}
       />
 
       <ReactionList
