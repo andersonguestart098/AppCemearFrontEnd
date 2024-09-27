@@ -28,7 +28,12 @@ const CommentSection: React.FC<CommentSectionProps> = ({
         variant="contained"
         color="primary"
         onClick={() => handleAddComment(postId)}
-        sx={{ marginTop: "10px" }}
+        sx={{
+          marginTop: "10px",
+          width: "200px", // Define a largura do botão
+          height: "60px", // Define a altura do botão
+          fontSize: "18px", // Aumenta o tamanho da fonte
+        }}
       >
         Comentar
       </Button>

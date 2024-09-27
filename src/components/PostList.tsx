@@ -403,14 +403,18 @@ const PostList: React.FC = () => {
                 >
                   <Box>
                     <IconButton onClick={() => toggleCommentSection(post.id)}>
-                      <TextsmsSharpIcon sx={{ color: "#0B68A9" }} />
+                      <TextsmsSharpIcon
+                        sx={{ fontSize: 34.5, color: "#0B68A9" }}
+                      />
                     </IconButton>
 
                     {post.comments && post.comments.length > 0 && (
                       <IconButton
                         onClick={(event) => handleShowComments(event, post)}
                       >
-                        <RemoveRedEyeIcon sx={{ color: "#0B68A9" }} />
+                        <RemoveRedEyeIcon
+                          sx={{ fontSize: 34.5, color: "#0B68A9" }}
+                        />
                       </IconButton>
                     )}
 
@@ -420,7 +424,7 @@ const PostList: React.FC = () => {
                         setReactionAnchorEl(event.currentTarget);
                       }}
                     >
-                      <PeopleIcon sx={{ color: "#0B68A9" }} />
+                      <PeopleIcon sx={{ fontSize: 34.5, color: "#0B68A9" }} />
                     </IconButton>
                   </Box>
 
