@@ -14,10 +14,16 @@ import {
   Dialog,
   DialogContent,
   DialogActions,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import CommentIcon from "@mui/icons-material/Comment";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import PeopleIcon from "@mui/icons-material/People";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import ThumbUpIcon from "@mui/icons-material/ThumbUp";
+import SentimentSatisfiedAltIcon from "@mui/icons-material/SentimentSatisfiedAlt";
+import EmojiEmotionsIcon from "@mui/icons-material/EmojiEmotions"; // Ícone para abrir o menu de reações
 import CloseIcon from "@mui/icons-material/Close";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -37,12 +43,16 @@ const PostList: React.FC = () => {
   const [newComment, setNewComment] = useState<string>("");
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null); // Para o Popover de comentários
-  const [popoverPost, setPopoverPost] = useState<any>(null); // Guarda os comentários do post no Popover
   const [reactionAnchorEl, setReactionAnchorEl] = useState<null | HTMLElement>(
     null
-  ); // Para o popover das reações
-  const [selectedReactionPost, setSelectedReactionPost] = useState<any>(null); // Guarda o post para exibir reações
+  ); // Para o popover de reações
+  const [reactionMenuAnchorEl, setReactionMenuAnchorEl] =
+    useState<null | HTMLElement>(null); // Para o menu de reações
+  const [selectedPostForReaction, setSelectedPostForReaction] =
+    useState<any>(null); // Post selecionado para a reação
   const [loading, setLoading] = useState(true);
+  const [popoverPost, setPopoverPost] = useState<any>(null); // Declarar popoverPost corretamente
+  const [reactions, setReactions] = useState<any[]>([]); // Reações para o popover
 
   // Função para buscar os posts
   const fetchPosts = async () => {
@@ -63,13 +73,10 @@ const PostList: React.FC = () => {
 
     // Configura a conexão ao Socket.IO para ouvir por novos posts
     socket.on("new-post", (newPost) => {
-      // Corrige o problema ao garantir que posts com imagem e sem imagem sejam tratados
       if (newPost.imagePath) {
-        // Quando o post possui uma imagem
         setPosts((prevPosts) => [newPost, ...prevPosts]);
         toast.info("Novo post com imagem adicionado!");
       } else {
-        // Quando o post não possui uma imagem
         setPosts((prevPosts) => [newPost, ...prevPosts]);
         toast.info("Novo post sem imagem adicionado!");
       }
@@ -133,17 +140,25 @@ const PostList: React.FC = () => {
     setPopoverPost(null);
   };
 
-  const handleReactionClick = (
+  const handleReactionClick = async (
     event: React.MouseEvent<HTMLElement>,
     post: any
   ) => {
     setReactionAnchorEl(event.currentTarget);
-    setSelectedReactionPost(post); // Guarda o post cujas reações serão exibidas
+    setSelectedPostForReaction(post);
+
+    try {
+      const response = await axios.get(`${baseURL}/posts/${post.id}/reactions`);
+      setReactions(response.data);
+    } catch (error) {
+      console.error("Erro ao buscar reações:", error);
+      toast.error("Erro ao buscar reações.");
+    }
   };
 
   const handleCloseReactionPopover = () => {
     setReactionAnchorEl(null);
-    setSelectedReactionPost(null);
+    setSelectedPostForReaction(null);
   };
 
   const countReactions = (postReactions: any[], type: string) => {
@@ -157,6 +172,40 @@ const PostList: React.FC = () => {
 
   const handleCloseImageDialog = () => {
     setOpenImageDialog(null); // Fecha o Dialog ao clicar fora ou no botão de fechar
+  };
+
+  const handleOpenReactionMenu = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    post: any
+  ) => {
+    setReactionMenuAnchorEl(event.currentTarget);
+    setSelectedPostForReaction(post);
+  };
+
+  const handleCloseReactionMenu = () => {
+    setReactionMenuAnchorEl(null);
+    setSelectedPostForReaction(null);
+  };
+
+  const handleReaction = async (reactionType: string) => {
+    if (!selectedPostForReaction) return;
+    const token = localStorage.getItem("token");
+
+    try {
+      await axios.post(
+        `${baseURL}/posts/${selectedPostForReaction.id}/reactions`,
+        { type: reactionType },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      toast.success(`Reagiu com ${reactionType}!`);
+      handleCloseReactionMenu();
+    } catch (error) {
+      toast.error("Erro ao adicionar reação.");
+    }
   };
 
   return (
@@ -243,18 +292,6 @@ const PostList: React.FC = () => {
                     {new Date(post.created_at).toLocaleString()}
                   </Typography>
 
-                  {/* Exibe o último comentário diretamente no card */}
-                  <Box mt={2}>
-                    <Typography variant="subtitle2">
-                      Último comentário:
-                      {postComments.length > 0
-                        ? `${
-                            postComments[postComments.length - 1].user.usuario
-                          }: ${postComments[postComments.length - 1].content}`
-                        : " Sem comentários ainda"}
-                    </Typography>
-                  </Box>
-
                   {/* Alinhando todos os ícones na horizontal */}
                   <Box
                     sx={{
@@ -283,6 +320,13 @@ const PostList: React.FC = () => {
                       onClick={(event) => handleReactionClick(event, post)}
                     >
                       <PeopleIcon sx={{ color: "#FF9D12" }} />
+                    </IconButton>
+
+                    {/* Botão para abrir o menu de reações */}
+                    <IconButton
+                      onClick={(event) => handleOpenReactionMenu(event, post)}
+                    >
+                      <EmojiEmotionsIcon sx={{ color: "#FF9D12" }} />
                     </IconButton>
 
                     {/* Contagem de reações organizadas */}
@@ -361,8 +405,8 @@ const PostList: React.FC = () => {
       >
         <Box sx={{ padding: 2 }}>
           <Typography variant="h6">Reações</Typography>
-          {selectedReactionPost && selectedReactionPost.reactions.length > 0 ? (
-            selectedReactionPost.reactions.map((reaction: any, index: any) => (
+          {reactions.length > 0 ? (
+            reactions.map((reaction: any, index: any) => (
               <Typography key={index}>
                 {reaction.user
                   ? `${reaction.user.usuario} reagiu com ${reaction.type}`
@@ -374,6 +418,27 @@ const PostList: React.FC = () => {
           )}
         </Box>
       </Popover>
+
+      {/* Menu para adicionar reações */}
+      <Menu
+        anchorEl={reactionMenuAnchorEl}
+        open={Boolean(reactionMenuAnchorEl)}
+        onClose={handleCloseReactionMenu}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "left",
+        }}
+      >
+        <MenuItem onClick={() => handleReaction("like")}>
+          <ThumbUpIcon sx={{ marginRight: "8px" }} /> Curtir
+        </MenuItem>
+        <MenuItem onClick={() => handleReaction("love")}>
+          <FavoriteIcon sx={{ marginRight: "8px" }} /> Amar
+        </MenuItem>
+        <MenuItem onClick={() => handleReaction("haha")}>
+          <SentimentSatisfiedAltIcon sx={{ marginRight: "8px" }} /> Haha
+        </MenuItem>
+      </Menu>
 
       {/* Dialog para imagem em tela cheia */}
       <Dialog
