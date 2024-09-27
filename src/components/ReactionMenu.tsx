@@ -4,10 +4,9 @@ import React from "react";
 interface ReactionMenuProps {
   anchorEl: HTMLElement | null;
   handleClose: () => void;
-  handleReaction: (type: string) => void;
+  handleReaction: (type: string) => void; // Passando o tipo de reação
 }
 
-// Wrap the component with React.memo to prevent unnecessary re-renders
 const ReactionMenu: React.FC<ReactionMenuProps> = React.memo(
   ({ anchorEl, handleClose, handleReaction }) => (
     <Popover

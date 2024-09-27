@@ -16,15 +16,16 @@ import {
   MenuItem,
   TextField,
   CircularProgress,
+  Pagination,
 } from "@mui/material";
 import PeopleIcon from "@mui/icons-material/People";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import TextsmsSharpIcon from "@mui/icons-material/TextsmsSharp";
 import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
-import CommentSection from "./CommentSection"; // Para adicionar novos comentários
+import CommentSection from "./CommentSection";
 import ReactionMenu from "./ReactionMenu";
 import ReactionList from "./ReactionList";
-import CommentList from "./Comment"; // Para listar todos os comentários
+import CommentList from "./Comment";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -57,6 +58,9 @@ const PostList: React.FC = () => {
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editedTitulo, setEditedTitulo] = useState<string>("");
   const [editedConteudo, setEditedConteudo] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const postsPerPage = 7;
 
   const fetchComments = async (postId: string) => {
     try {
@@ -68,28 +72,55 @@ const PostList: React.FC = () => {
     }
   };
 
-  const fetchPostsWithComments = async () => {
+  const fetchPostsWithComments = async (page: number) => {
+    const start = performance.now();
     setLoadingPosts(true);
+
     try {
-      const response = await axios.get(`${baseURL}/posts`);
+      // Chamada à API para buscar os posts da página atual com limite
+      const response = await axios.get(`${baseURL}/posts`, {
+        params: {
+          page: page, // Página atual
+          limit: postsPerPage, // Limite de posts por página
+        },
+      });
+
+      // Verificar se response.data é um array ou se a resposta tem posts dentro de um objeto
+      const postsArray = Array.isArray(response.data.posts)
+        ? response.data.posts
+        : response.data;
+
+      if (!postsArray) {
+        throw new Error("Estrutura inesperada na resposta da API");
+      }
+
+      // Buscar comentários para cada post e adicionar ao post
       const postsData = await Promise.all(
-        response.data.map(async (post: any) => {
+        postsArray.map(async (post: any) => {
           const comments = await fetchComments(post.id);
           return { ...post, comments };
         })
       );
+
+      // Atualizar os posts exibidos
       setPosts(postsData);
+
+      // Atualizar o total de páginas com base no número total de posts (usando o campo total da resposta)
+      setTotalPages(Math.ceil(response.data.total / postsPerPage)); // Certifique-se que a API está retornando o campo `total`
     } catch (error) {
       console.error("Erro ao buscar postagens", error);
     } finally {
       setLoadingPosts(false);
     }
+
+    const end = performance.now();
+    console.log(`fetchPostsWithComments levou ${end - start} ms`);
   };
 
+  // Chamada ao useEffect
   useEffect(() => {
-    fetchPostsWithComments();
+    fetchPostsWithComments(currentPage);
 
-    // WebSocket listeners
     socket.on("new-post", (newPost) => {
       setPosts((prevPosts) => [newPost, ...prevPosts]);
       toast.info("Novo post adicionado!");
@@ -108,59 +139,44 @@ const PostList: React.FC = () => {
       socket.off("new-post");
       socket.off("post-reaction-updated");
     };
-  }, []);
+  }, [currentPage]);
+
+  const handleReaction = useCallback(
+    async (reactionType: string) => {
+      const start = performance.now();
+
+      if (!selectedReactionPost) return;
+      const token = localStorage.getItem("token");
+
+      try {
+        await axios.post(
+          `${baseURL}/posts/${selectedReactionPost.id}/reaction`,
+          { type: reactionType },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        toast.success(`Reagiu com ${reactionType}!`);
+        handleCloseReactionMenu();
+      } catch (error) {
+        toast.error("Erro ao adicionar reação.");
+      }
+
+      const end = performance.now();
+      console.log(`handleReaction levou ${end - start} ms`);
+    },
+    [selectedReactionPost]
+  );
 
   const handleCloseReactionMenu = () => {
     setReactionMenuAnchorEl(null);
     setSelectedReactionPost(null);
   };
-
-  const debouncedHandleReaction = useCallback(
-    debounce(async (reactionType: string) => {
-      if (!selectedReactionPost) return;
-      const token = localStorage.getItem("token");
-
-      try {
-        await axios.post(
-          `${baseURL}/posts/${selectedReactionPost.id}/reaction`,
-          { type: reactionType },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        toast.success(`Reagiu com ${reactionType}!`);
-        handleCloseReactionMenu();
-      } catch (error) {
-        toast.error("Erro ao adicionar reação.");
-      }
-    }, 300),
-    [selectedReactionPost] // Limita a execução a cada 300ms
-  );
-
-  // Função para adicionar uma reação ao post
-  // Função para adicionar uma reação ao post
-  const handleReaction = useCallback(
-    async (reactionType: string) => {
-      if (!selectedReactionPost) return;
-      const token = localStorage.getItem("token");
-
-      try {
-        await axios.post(
-          `${baseURL}/posts/${selectedReactionPost.id}/reaction`,
-          { type: reactionType },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        toast.success(`Reagiu com ${reactionType}!`);
-        handleCloseReactionMenu();
-      } catch (error) {
-        toast.error("Erro ao adicionar reação.");
-      }
-    },
-    [selectedReactionPost]
-  ); // Only re-create the function if selectedReactionPost changes
+  // Only re-create the function if selectedReactionPost changes
 
   // Função para adicionar um comentário
   const handleAddComment = useCallback(async () => {
+    const start = performance.now(); // Início da medição
+
     const token = localStorage.getItem("token");
     if (selectedPostId && newComment.trim()) {
       try {
@@ -172,10 +188,8 @@ const PostList: React.FC = () => {
           }
         );
 
-        // Após adicionar o comentário, buscar novamente os comentários atualizados
         const updatedComments = await fetchComments(selectedPostId);
 
-        // Atualizar os comentários do post
         setPosts((prevPosts) => {
           const updatedPosts = prevPosts.map((post) =>
             post.id === selectedPostId
@@ -185,11 +199,14 @@ const PostList: React.FC = () => {
           return updatedPosts;
         });
 
-        setNewComment(""); // Limpar o campo de comentário após sucesso
+        setNewComment("");
       } catch (error) {
         console.error("Erro ao adicionar comentário", error);
       }
     }
+
+    const end = performance.now(); // Fim da medição
+    console.log(`handleAddComment levou ${end - start} ms`);
   }, [selectedPostId, newComment]);
 
   const handleClick = (
@@ -211,7 +228,10 @@ const PostList: React.FC = () => {
     setEditedConteudo(conteudo);
     handleClose();
   };
+
   const handleSaveEdit = async (postId: string) => {
+    const start = performance.now(); // Início da medição
+
     try {
       await axios.put(`${baseURL}/posts/${postId}`, {
         titulo: editedTitulo,
@@ -230,9 +250,14 @@ const PostList: React.FC = () => {
     } catch (error) {
       toast.error("Erro ao editar post");
     }
+
+    const end = performance.now(); // Fim da medição
+    console.log(`handleSaveEdit levou ${end - start} ms`);
   };
 
   const handleDelete = async () => {
+    const start = performance.now(); // Início da medição
+
     if (selectedPost) {
       try {
         await axios.delete(`${baseURL}/posts/${selectedPost}`);
@@ -247,6 +272,9 @@ const PostList: React.FC = () => {
         toast.error(errorMessage);
       }
     }
+
+    const end = performance.now(); // Fim da medição
+    console.log(`handleDelete levou ${end - start} ms`);
   };
 
   const handleImageLoad = (postId: string) => {
@@ -297,217 +325,225 @@ const PostList: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <List>
-          {posts.map((post) => (
-            <ListItem key={post.id} sx={{ padding: "20px" }}>
-              <Card
-                sx={{
-                  width: "100%",
-                  borderRadius: "12px",
-                  border: "2px solid #FF9D12",
-                  padding: "16px",
-                }}
-              >
-                <IconButton
-                  onClick={(event) => handleClick(event, post.id)}
-                  sx={{ position: "absolute", top: "16px", right: "16px" }}
-                >
-                  <MoreVertIcon />
-                </IconButton>
-
-                <Menu
-                  anchorEl={anchorEl}
-                  open={Boolean(anchorEl) && selectedPost === post.id}
-                  onClose={handleClose}
-                >
-                  <MenuItem
-                    onClick={() =>
-                      handleEdit(post.id, post.titulo, post.conteudo)
-                    }
-                  >
-                    <EditIcon sx={{ marginRight: "8px" }} />
-                    Editar
-                  </MenuItem>
-                  <MenuItem onClick={handleDelete}>
-                    <DeleteIcon sx={{ marginRight: "8px" }} />
-                    Excluir
-                  </MenuItem>
-                </Menu>
-
-                <Typography
-                  variant="h5"
-                  sx={{ fontWeight: "bold", color: "#0B68A9" }}
-                >
-                  {post.titulo}
-                </Typography>
-
-                {post.imagePath && (
-                  <Box sx={{ position: "relative", textAlign: "center" }}>
-                    {imageLoading[post.id] && (
-                      <CircularProgress
-                        sx={{
-                          position: "absolute",
-                          top: "50%",
-                          left: "50%",
-                          transform: "translate(-50%, -50%)",
-                        }}
-                      />
-                    )}
-                    <img
-                      src={post.imagePath}
-                      alt={post.titulo}
-                      style={{
-                        width: "100%",
-                        maxHeight: "380px",
-                        objectFit: "cover",
-                        borderRadius: "8px",
-                        display: post.imagePath ? "block" : "none",
-                      }}
-                      onLoad={() => handleImageLoad(post.id)}
-                      onError={() => handleImageError(post.id)}
-                    />
-                  </Box>
-                )}
-
-                <Typography
-                  variant="body1"
-                  sx={{ color: "#555", marginTop: "8px" }}
-                >
-                  {post.conteudo}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{ color: "#333", marginTop: "8px", fontSize: "14px" }}
-                >
-                  {new Date(post.created_at).toLocaleString()}
-                </Typography>
-
-                <Box mt={2}>
-                  <Typography variant="subtitle2">
-                    Último comentário:{" "}
-                    {post.comments && post.comments.length > 0
-                      ? `${
-                          post.comments[post.comments.length - 1].user.usuario
-                        }: ${post.comments[post.comments.length - 1].content}`
-                      : "Sem comentários"}
-                  </Typography>
-                </Box>
-
-                <Box
+        <>
+          <List>
+            {posts.map((post) => (
+              <ListItem key={post.id} sx={{ padding: "20px" }}>
+                <Card
                   sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginTop: "16px",
+                    width: "100%",
+                    borderRadius: "12px",
+                    border: "2px solid #FF9D12",
+                    padding: "16px",
                   }}
                 >
-                  <Box>
-                    <IconButton onClick={() => toggleCommentSection(post.id)}>
-                      <TextsmsSharpIcon
-                        sx={{ fontSize: 34.5, color: "#0B68A9" }}
-                      />
-                    </IconButton>
+                  <IconButton
+                    onClick={(event) => handleClick(event, post.id)}
+                    sx={{ position: "absolute", top: "16px", right: "16px" }}
+                  >
+                    <MoreVertIcon />
+                  </IconButton>
 
-                    {post.comments && post.comments.length > 0 && (
-                      <IconButton
-                        onClick={(event) => handleShowComments(event, post)}
-                      >
-                        <RemoveRedEyeIcon
+                  <Menu
+                    anchorEl={anchorEl}
+                    open={Boolean(anchorEl) && selectedPost === post.id}
+                    onClose={handleClose}
+                  >
+                    <MenuItem
+                      onClick={() =>
+                        handleEdit(post.id, post.titulo, post.conteudo)
+                      }
+                    >
+                      <EditIcon sx={{ marginRight: "8px" }} />
+                      Editar
+                    </MenuItem>
+                    <MenuItem onClick={handleDelete}>
+                      <DeleteIcon sx={{ marginRight: "8px" }} />
+                      Excluir
+                    </MenuItem>
+                  </Menu>
+
+                  <Typography
+                    variant="h5"
+                    sx={{ fontWeight: "bold", color: "#0B68A9" }}
+                  >
+                    {post.titulo}
+                  </Typography>
+
+                  {post.imagePath && (
+                    <Box sx={{ position: "relative", textAlign: "center" }}>
+                      {imageLoading[post.id] && (
+                        <CircularProgress
+                          sx={{
+                            position: "absolute",
+                            top: "50%",
+                            left: "50%",
+                            transform: "translate(-50%, -50%)",
+                          }}
+                        />
+                      )}
+                      <img
+                        src={post.imagePath}
+                        alt={post.titulo}
+                        style={{
+                          width: "100%",
+                          maxHeight: "380px",
+                          objectFit: "cover",
+                          borderRadius: "8px",
+                          display: post.imagePath ? "block" : "none",
+                        }}
+                        onLoad={() => handleImageLoad(post.id)}
+                        onError={() => handleImageError(post.id)}
+                      />
+                    </Box>
+                  )}
+
+                  <Typography
+                    variant="body1"
+                    sx={{ color: "#555", marginTop: "8px" }}
+                  >
+                    {post.conteudo}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: "#333", marginTop: "8px", fontSize: "14px" }}
+                  >
+                    {new Date(post.created_at).toLocaleString()}
+                  </Typography>
+
+                  <Box mt={2}>
+                    <Typography variant="subtitle2">
+                      Último comentário:{" "}
+                      {post.comments && post.comments.length > 0
+                        ? `${
+                            post.comments[post.comments.length - 1].user.usuario
+                          }: ${post.comments[post.comments.length - 1].content}`
+                        : "Sem comentários"}
+                    </Typography>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginTop: "16px",
+                    }}
+                  >
+                    <Box>
+                      <IconButton onClick={() => toggleCommentSection(post.id)}>
+                        <TextsmsSharpIcon
                           sx={{ fontSize: 34.5, color: "#0B68A9" }}
                         />
                       </IconButton>
-                    )}
+
+                      {post.comments && post.comments.length > 0 && (
+                        <IconButton
+                          onClick={(event) => handleShowComments(event, post)}
+                        >
+                          <RemoveRedEyeIcon
+                            sx={{ fontSize: 34.5, color: "#0B68A9" }}
+                          />
+                        </IconButton>
+                      )}
+
+                      <IconButton
+                        onClick={(event) => {
+                          setSelectedReactionPost(post);
+                          setReactionAnchorEl(event.currentTarget);
+                        }}
+                      >
+                        <PeopleIcon sx={{ fontSize: 34.5, color: "#0B68A9" }} />
+                      </IconButton>
+                    </Box>
 
                     <IconButton
                       onClick={(event) => {
                         setSelectedReactionPost(post);
-                        setReactionAnchorEl(event.currentTarget);
+                        setReactionMenuAnchorEl(event.currentTarget);
                       }}
                     >
-                      <PeopleIcon sx={{ fontSize: 34.5, color: "#0B68A9" }} />
+                      <ThumbUpIcon sx={{ fontSize: 48, color: "#0095FF" }} />
                     </IconButton>
                   </Box>
 
-                  <IconButton
-                    onClick={(event) => {
-                      setSelectedReactionPost(post);
-                      setReactionMenuAnchorEl(event.currentTarget);
+                  {selectedPostId === post.id && (
+                    <CommentSection
+                      postId={post.id}
+                      newComment={newComment}
+                      handleCommentChange={(e) => setNewComment(e.target.value)}
+                      handleAddComment={handleAddComment}
+                    />
+                  )}
+
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "start",
+                      marginTop: "8px",
                     }}
                   >
-                    <ThumbUpIcon sx={{ fontSize: 48, color: "#0095FF" }} />
-                  </IconButton>
-                </Box>
+                    <Typography variant="body2">
+                      👍 {countReactions(post.reactions, "like")} ❤️{" "}
+                      {countReactions(post.reactions, "love")} 😂{" "}
+                      {countReactions(post.reactions, "haha")}
+                    </Typography>
+                  </Box>
 
-                {selectedPostId === post.id && (
-                  <CommentSection
-                    postId={post.id}
-                    newComment={newComment}
-                    handleCommentChange={(e) => setNewComment(e.target.value)}
-                    handleAddComment={handleAddComment}
-                  />
-                )}
-
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "start",
-                    marginTop: "8px",
-                  }}
-                >
-                  <Typography variant="body2">
-                    👍 {countReactions(post.reactions, "like")} ❤️{" "}
-                    {countReactions(post.reactions, "love")} 😂{" "}
-                    {countReactions(post.reactions, "haha")}
-                  </Typography>
-                </Box>
-
-                {editingPostId === post.id && (
-                  <>
-                    <TextField
-                      label="Título"
-                      variant="outlined"
-                      fullWidth
-                      value={editedTitulo}
-                      onChange={(e) => setEditedTitulo(e.target.value)}
-                      sx={{ marginBottom: "10px" }}
-                    />
-                    <TextField
-                      label="Conteúdo"
-                      variant="outlined"
-                      fullWidth
-                      multiline
-                      rows={4}
-                      value={editedConteudo}
-                      onChange={(e) => setEditedConteudo(e.target.value)}
-                      sx={{ marginBottom: "10px" }}
-                    />
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={() => handleSaveEdit(post.id)}
-                    >
-                      Salvar
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="secondary"
-                      onClick={() => setEditingPostId(null)}
-                      sx={{ marginLeft: "10px" }}
-                    >
-                      Cancelar
-                    </Button>
-                  </>
-                )}
-              </Card>
-            </ListItem>
-          ))}
-        </List>
+                  {editingPostId === post.id && (
+                    <>
+                      <TextField
+                        label="Título"
+                        variant="outlined"
+                        fullWidth
+                        value={editedTitulo}
+                        onChange={(e) => setEditedTitulo(e.target.value)}
+                        sx={{ marginBottom: "10px" }}
+                      />
+                      <TextField
+                        label="Conteúdo"
+                        variant="outlined"
+                        fullWidth
+                        multiline
+                        rows={4}
+                        value={editedConteudo}
+                        onChange={(e) => setEditedConteudo(e.target.value)}
+                        sx={{ marginBottom: "10px" }}
+                      />
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => handleSaveEdit(post.id)}
+                      >
+                        Salvar
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => setEditingPostId(null)}
+                        sx={{ marginLeft: "10px" }}
+                      >
+                        Cancelar
+                      </Button>
+                    </>
+                  )}
+                </Card>
+              </ListItem>
+            ))}
+          </List>
+          <Pagination
+            count={totalPages} // Total de páginas
+            page={currentPage} // Página atual
+            onChange={(event, value) => setCurrentPage(value)} // Atualiza a página ao mudar
+            color="primary"
+          />
+        </>
       )}
 
       <ReactionMenu
         anchorEl={reactionMenuAnchorEl}
         handleClose={handleCloseReactionMenu}
-        handleReaction={debouncedHandleReaction}
+        handleReaction={(reactionType) => handleReaction(reactionType)} // Passando a função handleReaction
       />
 
       <ReactionList
