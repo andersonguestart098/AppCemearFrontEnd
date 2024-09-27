@@ -18,7 +18,13 @@ interface Event {
   descricao: string;
 }
 
-const CalendarComponent: React.FC = () => {
+interface EventCalendarProps {
+  closeCalendarModal: () => void; // Prop para fechar o modal
+}
+
+const CalendarComponent: React.FC<EventCalendarProps> = ({
+  closeCalendarModal,
+}) => {
   const [date, setDate] = useState<Date | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [descricao, setDescricao] = useState<string>("");
@@ -112,41 +118,23 @@ const CalendarComponent: React.FC = () => {
   }, []);
 
   return (
-    <Container maxWidth="sm">
-      <Box
-        textAlign="center"
-        mb={4}
-        style={{
-          maxHeight: "80vh", // Limita a altura a 80% da tela
-          overflowY: "auto", // Permite scroll vertical
-          padding: "20px", // Adiciona padding interno
-          position: "relative", // Necessário para o posicionamento do botão de fechar
-        }}
-      >
+    <Container
+      maxWidth="sm"
+      sx={{
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        overflowY: "auto",
+        padding: "10px",
+      }}
+    >
+      <Box textAlign="center" mb={4}>
         <Typography variant="h4" gutterBottom sx={{ color: "#1565c0" }}>
           Calendário Cemear
         </Typography>
-        <button
-          onClick={handleClose}
-          style={{
-            position: "absolute",
-            top: "10px",
-            right: "10px",
-            backgroundColor: "transparent",
-            border: "none",
-            fontSize: "24px",
-            cursor: "pointer",
-          }}
-        >
-          &times;
-        </button>
       </Box>
       <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        flexDirection="column"
-        mb={4}
         sx={{
           border: "2px solid #f57c00",
           borderRadius: "12px",
@@ -191,7 +179,25 @@ const CalendarComponent: React.FC = () => {
           </Button>
         </Box>
       )}
-
+      {/* Botão de fechar */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          paddingTop: "16px",
+        }}
+      >
+        <Button
+          variant="outlined"
+          onClick={closeCalendarModal}
+          sx={{
+            width: "100%",
+            maxWidth: "200px",
+          }}
+        >
+          Fechar
+        </Button>
+      </Box>
       {/* Popover para mostrar a descrição completa do evento */}
       <Popover
         id={id}

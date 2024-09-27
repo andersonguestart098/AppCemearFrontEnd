@@ -1,38 +1,43 @@
-// CommentSection.tsx
 import React from "react";
-import { Box, TextField, Button } from "@mui/material";
+import { Box, Popover, Typography } from "@mui/material";
 
-interface CommentSectionProps {
-  postId: string;
-  newComment: string;
-  handleCommentChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleAddComment: (postId: string) => void;
+interface CommentListProps {
+  anchorEl: HTMLElement | null;
+  selectedPost: any; // Ajuste conforme necessário
+  handleClose: () => void;
 }
 
-const CommentSection: React.FC<CommentSectionProps> = ({
-  postId,
-  newComment,
-  handleCommentChange,
-  handleAddComment,
-}) => (
-  <Box mt={2}>
-    <TextField
-      label="Adicionar comentário"
-      fullWidth
-      multiline
-      rows={2}
-      value={newComment}
-      onChange={handleCommentChange}
-    />
-    <Button
-      variant="contained"
-      color="primary"
-      onClick={() => handleAddComment(postId)}
-      sx={{ marginTop: "10px" }}
+const CommentList: React.FC<CommentListProps> = ({
+  anchorEl,
+  selectedPost,
+  handleClose,
+}) => {
+  return (
+    <Popover
+      open={Boolean(anchorEl)}
+      anchorEl={anchorEl}
+      onClose={handleClose}
+      anchorOrigin={{
+        vertical: "bottom",
+        horizontal: "left",
+      }}
     >
-      Comentar
-    </Button>
-  </Box>
-);
+      <Box sx={{ padding: 2 }}>
+        <Typography variant="h6">Comentários</Typography>
+        {selectedPost?.comments?.length > 0 ? (
+          selectedPost.comments.map((comment: any, index: any) => (
+            <Typography key={index}>
+              {comment.user
+                ? `${comment.user.usuario}: ${comment.content}`
+                : "Usuário desconhecido"}
+            </Typography>
+          ))
+        ) : (
+          <Typography>Nenhum comentário disponível</Typography>
+        )}
+      </Box>
+    </Popover>
+  );
+};
 
-export default CommentSection;
+export default CommentList;

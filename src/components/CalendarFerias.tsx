@@ -8,10 +8,10 @@ import {
   Container,
   Typography,
   Box,
-  Popover,
   Grid,
+  Popover,
 } from "@mui/material";
-import BeachAccessIcon from "@mui/icons-material/BeachAccess"; // Ícone de férias
+import BeachAccessIcon from "@mui/icons-material/BeachAccess";
 import { useUserContext } from "./UserContext";
 
 interface Vacation {
@@ -21,25 +21,30 @@ interface Vacation {
   returnDate: string;
 }
 
-const VacationCalendar: React.FC = () => {
+interface VacationCalendarProps {
+  closeCalendarModal: () => void; // Prop para fechar o modal
+}
+
+const VacationCalendar: React.FC<VacationCalendarProps> = ({
+  closeCalendarModal,
+}) => {
   const [date, setDate] = useState<Date | null>(null);
   const [vacations, setVacations] = useState<Vacation[]>([]);
-  const [name, setName] = useState<string>(""); // Nome do colaborador
-  const [startDate, setStartDate] = useState<string>(""); // Data de início
-  const [returnDate, setReturnDate] = useState<string>(""); // Data de retorno
+  const [name, setName] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
+  const [returnDate, setReturnDate] = useState<string>("");
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null);
   const [selectedVacation, setSelectedVacation] = useState<Vacation | null>(
     null
   );
   const { tipoUsuario } = useUserContext();
 
-  // Função para adicionar um registro de férias
   const handleAddVacation = async () => {
     if (name.trim() !== "" && startDate !== "" && returnDate !== "") {
       const newVacation = { name, startDate, returnDate };
       try {
         const response = await axios.post(
-          "https://cemear-b549eb196d7c.herokuapp.com/ferias", // Endpoint de férias
+          "https://cemear-b549eb196d7c.herokuapp.com/ferias",
           newVacation
         );
         setVacations([...vacations, { ...newVacation, id: response.data.id }]);
@@ -52,17 +57,14 @@ const VacationCalendar: React.FC = () => {
     }
   };
 
-  // Função para truncar o nome do colaborador
   const truncateName = (name: string) => {
     return name.length > 3 ? name.substring(0, 3) + "..." : name;
   };
 
-  // Função para formatar as datas para YYYY-MM-DD
   const formatDate = (dateString: string) => {
     return new Date(dateString).toISOString().split("T")[0];
   };
 
-  // Função para marcar as datas de início e retorno de férias
   const tileClassName = ({ date }: { date: Date }) => {
     const dateString = date.toISOString().split("T")[0];
     return vacations.some(
@@ -90,7 +92,7 @@ const VacationCalendar: React.FC = () => {
           backgroundColor:
             formatDate(vacation.startDate) === dateString
               ? "#00C853"
-              : "#FF5252", // Verde para início e vermelho para retorno
+              : "#FF5252",
           padding: "4px 8px",
           borderRadius: "8px",
           fontSize: "12px",
@@ -98,11 +100,10 @@ const VacationCalendar: React.FC = () => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          flexDirection: "column", // Coloca o ícone e o nome em colunas
+          flexDirection: "column",
         }}
       >
-        <BeachAccessIcon sx={{ color: "#fff", fontSize: "20px" }} />{" "}
-        {/* Ícone de férias */}
+        <BeachAccessIcon sx={{ color: "#fff", fontSize: "20px" }} />
         <span>{truncateName(vacation.name)}</span>
       </div>
     ) : null;
@@ -116,19 +117,18 @@ const VacationCalendar: React.FC = () => {
     setSelectedVacation(selectedVacation);
   };
 
-  const handleClose = () => {
+  const handleClosePopover = () => {
     setAnchorEl(null);
     setSelectedVacation(null);
   };
 
   const open = Boolean(anchorEl);
-  const id = open ? "simple-popover" : undefined;
 
   useEffect(() => {
     const fetchVacations = async () => {
       try {
         const response = await axios.get(
-          "https://cemear-b549eb196d7c.herokuapp.com/ferias" // Endpoint de férias
+          "https://cemear-b549eb196d7c.herokuapp.com/ferias"
         );
         const formattedVacations = response.data.map((vacation: any) => ({
           ...vacation,
@@ -144,45 +144,30 @@ const VacationCalendar: React.FC = () => {
   }, []);
 
   return (
-    <Container maxWidth="sm">
-      <Box
-        textAlign="center"
-        mb={4}
-        style={{
-          maxHeight: "80vh", // Limita a altura a 80% da tela
-          overflowY: "auto", // Permite scroll vertical
-          padding: "20px", // Adiciona padding interno
-          position: "relative", // Necessário para o posicionamento do botão de fechar
-        }}
-      >
+    <Container
+      maxWidth="sm"
+      sx={{
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        overflowY: "auto",
+        padding: "10px",
+      }}
+    >
+      <Box textAlign="center" mb={2}>
         <Typography variant="h4" gutterBottom sx={{ color: "#1565c0" }}>
           Calendário de Férias
         </Typography>
-        <button
-          onClick={handleClose}
-          style={{
-            position: "absolute",
-            top: "10px",
-            right: "10px",
-            backgroundColor: "transparent",
-            border: "none",
-            fontSize: "24px",
-            cursor: "pointer",
-          }}
-        >
-          &times;
-        </button>
       </Box>
+
       <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        flexDirection="column"
-        mb={4}
         sx={{
           border: "2px solid #64b5f6",
           borderRadius: "12px",
           padding: "16px",
+          width: "100%",
+          flexGrow: 1,
         }}
       >
         <Calendar
@@ -196,10 +181,12 @@ const VacationCalendar: React.FC = () => {
           value={date}
           tileClassName={tileClassName}
           tileContent={tileContent}
+          className="responsive-calendar"
         />
       </Box>
+
       {tipoUsuario === "admin" && (
-        <Box mb={4}>
+        <Box mb={4} mt={2}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
               <TextField
@@ -248,12 +235,30 @@ const VacationCalendar: React.FC = () => {
         </Box>
       )}
 
-      {/* Popover para mostrar as informações completas de férias */}
+      {/* Botão de fechar */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          paddingTop: "16px",
+        }}
+      >
+        <Button
+          variant="outlined"
+          onClick={closeCalendarModal} // Passando a prop closeCalendarModal
+          sx={{
+            width: "100%",
+            maxWidth: "200px",
+          }}
+        >
+          Fechar
+        </Button>
+      </Box>
+
       <Popover
-        id={id}
         open={open}
         anchorEl={anchorEl}
-        onClose={handleClose}
+        onClose={handleClosePopover}
         anchorOrigin={{
           vertical: "bottom",
           horizontal: "center",

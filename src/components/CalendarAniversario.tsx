@@ -19,7 +19,13 @@ interface Birthday {
   name: string;
 }
 
-const BirthdayCalendar: React.FC = () => {
+interface BirthdayCalendarProps {
+  closeCalendarModal: () => void; // Prop para fechar o modal
+}
+
+const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
+  closeCalendarModal,
+}) => {
   const [date, setDate] = useState<Date | null>(null);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [name, setName] = useState<string>(""); // Nome do aniversariante
@@ -94,7 +100,7 @@ const BirthdayCalendar: React.FC = () => {
     setSelectedBirthday(selectedBirthday);
   };
 
-  const handleClose = () => {
+  const handleClosePopover = () => {
     setAnchorEl(null);
     setSelectedBirthday(null);
   };
@@ -117,46 +123,30 @@ const BirthdayCalendar: React.FC = () => {
   }, []);
 
   return (
-    <Container maxWidth="sm">
-      <Box
-        textAlign="center"
-        mb={4}
-        style={{
-          maxHeight: "80vh",
-          overflowY: "auto",
-          padding: "20px",
-          position: "relative",
-        }}
-      >
+    <Container
+      maxWidth="sm"
+      sx={{
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        overflowY: "auto",
+        padding: "10px",
+      }}
+    >
+      <Box textAlign="center" mb={2}>
         <Typography variant="h4" gutterBottom sx={{ color: "#1565c0" }}>
           Calendário de Aniversariantes
         </Typography>
-        <button
-          onClick={handleClose}
-          style={{
-            position: "absolute",
-            top: "10px",
-            right: "10px",
-            backgroundColor: "transparent",
-            border: "none",
-            fontSize: "24px",
-            cursor: "pointer",
-          }}
-        >
-          &times;
-        </button>
       </Box>
+
       <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        flexDirection="column"
-        mb={4}
         sx={{
           border: "2px solid #FFCDD2",
           borderRadius: "12px",
           padding: "16px",
           width: "100%",
+          flexGrow: 1,
         }}
       >
         <Calendar
@@ -173,8 +163,9 @@ const BirthdayCalendar: React.FC = () => {
           className="responsive-calendar"
         />
       </Box>
+
       {tipoUsuario === "admin" && (
-        <Box mb={4}>
+        <Box mb={4} mt={2}>
           <TextField
             label="Nome do aniversariante"
             variant="outlined"
@@ -197,11 +188,31 @@ const BirthdayCalendar: React.FC = () => {
         </Box>
       )}
 
+      {/* Botão de fechar */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          paddingTop: "16px",
+        }}
+      >
+        <Button
+          variant="outlined"
+          onClick={closeCalendarModal}
+          sx={{
+            width: "100%",
+            maxWidth: "200px",
+          }}
+        >
+          Fechar
+        </Button>
+      </Box>
+
       <Popover
         id={id}
         open={open}
         anchorEl={anchorEl}
-        onClose={handleClose}
+        onClose={handleClosePopover}
         anchorOrigin={{
           vertical: "bottom",
           horizontal: "center",

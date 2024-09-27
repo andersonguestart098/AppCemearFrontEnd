@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
-import io from "socket.io-client"; // Importar o Socket.IO
+import io from "socket.io-client";
 import {
   List,
   ListItem,
@@ -8,439 +8,484 @@ import {
   Typography,
   Box,
   IconButton,
-  TextField,
-  Button,
-  Popover,
   Dialog,
   DialogContent,
   DialogActions,
+  Button,
   Menu,
   MenuItem,
+  TextField,
 } from "@mui/material";
-import CommentIcon from "@mui/icons-material/Comment";
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import PeopleIcon from "@mui/icons-material/People";
-import FavoriteIcon from "@mui/icons-material/Favorite";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
-import SentimentSatisfiedAltIcon from "@mui/icons-material/SentimentSatisfiedAlt";
-import EmojiEmotionsIcon from "@mui/icons-material/EmojiEmotions"; // Ícone para abrir o menu de reações
+import TextsmsSharpIcon from "@mui/icons-material/TextsmsSharp";
+import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
+import CommentSection from "./CommentSection"; // Para adicionar novos comentários
+import ReactionMenu from "./ReactionMenu";
+import ReactionList from "./ReactionList";
+import CommentList from "./Comment"; // Para listar todos os comentários
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
 import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 
-// URL base do Heroku
 const baseURL = "https://cemear-b549eb196d7c.herokuapp.com";
-
-// Conectar ao Socket.IO usando a URL do Heroku
-const socket = io(baseURL, {
-  path: "/socket.io", // Caminho correto para o Socket.IO
-});
+const socket = io(baseURL, { path: "/socket.io" });
 
 const PostList: React.FC = () => {
   const [posts, setPosts] = useState<any[]>([]);
-  const [openImageDialog, setOpenImageDialog] = useState<string | null>(null);
-  const [comments, setComments] = useState<{ [postId: string]: any[] }>({});
-  const [newComment, setNewComment] = useState<string>("");
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null); // Para o Popover de comentários
+  const [newComment, setNewComment] = useState<string>(""); // Para o novo comentário
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null); // Para adicionar comentários
+  const [reactionMenuAnchorEl, setReactionMenuAnchorEl] =
+    useState<null | HTMLElement>(null);
   const [reactionAnchorEl, setReactionAnchorEl] = useState<null | HTMLElement>(
     null
-  ); // Para o popover de reações
-  const [reactionMenuAnchorEl, setReactionMenuAnchorEl] =
-    useState<null | HTMLElement>(null); // Para o menu de reações
-  const [selectedPostForReaction, setSelectedPostForReaction] =
-    useState<any>(null); // Post selecionado para a reação
-  const [loading, setLoading] = useState(true);
-  const [popoverPost, setPopoverPost] = useState<any>(null); // Declarar popoverPost corretamente
-  const [reactions, setReactions] = useState<any[]>([]); // Reações para o popover
+  );
+  const [selectedReactionPost, setSelectedReactionPost] = useState<any>(null);
+  const [commentListAnchorEl, setCommentListAnchorEl] =
+    useState<null | HTMLElement>(null); // Para o Popover dos comentários
+  const [selectedCommentPost, setSelectedCommentPost] = useState<any>(null); // Post selecionado para exibir comentários
+  const [openImageDialog, setOpenImageDialog] = useState<string | null>(null); // Para o Dialog de imagem em fullscreen
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedPost, setSelectedPost] = useState<string | null>(null);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editedTitulo, setEditedTitulo] = useState<string>("");
+  const [editedConteudo, setEditedConteudo] = useState<string>("");
 
-  // Função para buscar os posts
-  const fetchPosts = async () => {
-    try {
-      const response = await axios.get(`${baseURL}/posts`);
-      setPosts(response.data);
-      response.data.forEach((post: any) => fetchComments(post.id));
-    } catch (error) {
-      toast.error("Erro ao buscar postagens");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Efeito para buscar posts e conectar o Socket.IO
-  useEffect(() => {
-    fetchPosts();
-
-    // Configura a conexão ao Socket.IO para ouvir por novos posts
-    socket.on("new-post", (newPost) => {
-      if (newPost.imagePath) {
-        setPosts((prevPosts) => [newPost, ...prevPosts]);
-        toast.info("Novo post com imagem adicionado!");
-      } else {
-        setPosts((prevPosts) => [newPost, ...prevPosts]);
-        toast.info("Novo post sem imagem adicionado!");
-      }
-    });
-
-    // Limpeza da conexão do Socket.IO ao desmontar o componente
-    return () => {
-      socket.off("new-post");
-    };
-  }, []);
-
+  // Função para buscar os comentários de um post
   const fetchComments = async (postId: string) => {
     try {
       const response = await axios.get(`${baseURL}/posts/${postId}/comments`);
-      setComments((prevComments) => ({
-        ...prevComments,
-        [postId]: response.data,
-      }));
+      return response.data;
     } catch (error) {
-      console.error("Erro ao buscar comentários:", error);
+      console.error("Erro ao buscar comentários", error);
+      return [];
     }
   };
 
-  const handleCommentIconClick = (postId: string) => {
-    setSelectedPostId(postId === selectedPostId ? null : postId);
-  };
-
-  const handleAddComment = async (postId: string) => {
-    const token = localStorage.getItem("token");
-
+  // Função para buscar os posts com seus comentários
+  const fetchPostsWithComments = async () => {
     try {
-      await axios.post(
-        `${baseURL}/posts/${postId}/comments`,
-        { content: newComment },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const response = await axios.get(`${baseURL}/posts`);
+      const postsData = await Promise.all(
+        response.data.map(async (post: any) => {
+          const comments = await fetchComments(post.id); // Buscar os comentários de cada post
+          return { ...post, comments };
+        })
       );
-      fetchComments(postId); // Atualiza os comentários após adicionar
-      setNewComment(""); // Limpa o campo de comentário
-      toast.success("Comentário adicionado com sucesso!");
-      setSelectedPostId(null); // Fecha o campo de comentário após adicionar
+      setPosts(postsData);
     } catch (error) {
-      console.error("Erro ao adicionar comentário:", error);
-      toast.error("Erro ao adicionar comentário.");
+      console.error("Erro ao buscar postagens", error);
     }
   };
 
-  const handleShowAllComments = (
+  useEffect(() => {
+    fetchPostsWithComments();
+
+    socket.on("new-post", (newPost) => {
+      fetchComments(newPost.id).then((comments) => {
+        setPosts((prev) => [{ ...newPost, comments }, ...prev]);
+      });
+    });
+
+    socket.on("post-reaction-updated", (updatedPost) =>
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === updatedPost.id ? { ...updatedPost } : post
+        )
+      )
+    );
+
+    return () => {
+      socket.off("new-post");
+      socket.off("post-reaction-updated");
+    };
+  }, []);
+
+  // Função para adicionar uma reação ao post
+  const handleReaction = useCallback(
+    async (reactionType: string) => {
+      const token = localStorage.getItem("token");
+      if (selectedReactionPost?.id) {
+        try {
+          const response = await axios.post(
+            `${baseURL}/posts/${selectedReactionPost.id}/reaction`,
+            { type: reactionType },
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          // Atualizar o post localmente após a reação
+          setPosts((prev) =>
+            prev.map((post) =>
+              post.id === selectedReactionPost.id ? response.data : post
+            )
+          );
+          // Fechar o menu de reações
+          setReactionMenuAnchorEl(null);
+          console.log("Reação adicionada com sucesso!");
+        } catch (error) {
+          console.error("Erro ao adicionar reação", error);
+        }
+      }
+    },
+    [selectedReactionPost]
+  );
+
+  // Função para adicionar um comentário
+  const handleAddComment = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (selectedPostId && newComment.trim()) {
+      try {
+        await axios.post(
+          `${baseURL}/posts/${selectedPostId}/comments`,
+          { content: newComment },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        // Buscar e atualizar os comentários do post após adicionar um novo
+        const updatedComments = await fetchComments(selectedPostId);
+        setPosts((prev) =>
+          prev.map((post) =>
+            post.id === selectedPostId
+              ? { ...post, comments: updatedComments }
+              : post
+          )
+        );
+        setNewComment(""); // Limpar o campo de comentário após adicionar
+        console.log("Comentário adicionado com sucesso!");
+      } catch (error) {
+        console.error("Erro ao adicionar comentário", error);
+      }
+    }
+  }, [selectedPostId, newComment]);
+
+  // Função para exibir a lista de comentários
+  const handleShowComments = (
     event: React.MouseEvent<HTMLElement>,
     post: any
   ) => {
-    setAnchorEl(event.currentTarget); // Mostra o Popover ao clicar no ícone de "+"
-    setPopoverPost(post); // Guarda os comentários do post no Popover
+    setSelectedCommentPost(post); // Definir o post que será exibido
+    setCommentListAnchorEl(event.currentTarget); // Definir o ancoramento do Popover
   };
 
-  const handleClosePopover = () => {
-    setAnchorEl(null); // Fecha o Popover
-    setPopoverPost(null);
+  // Função para contar as reações de um tipo específico
+  const countReactions = (reactions: any[], type: string) => {
+    return reactions?.filter((reaction) => reaction.type === type).length || 0;
   };
 
-  const handleReactionClick = async (
-    event: React.MouseEvent<HTMLElement>,
-    post: any
-  ) => {
-    setReactionAnchorEl(event.currentTarget);
-    setSelectedPostForReaction(post);
-
-    try {
-      const response = await axios.get(`${baseURL}/posts/${post.id}/reactions`);
-      setReactions(response.data);
-    } catch (error) {
-      console.error("Erro ao buscar reações:", error);
-      toast.error("Erro ao buscar reações.");
+  // Função para abrir/fechar o campo de comentário
+  const toggleCommentSection = (postId: string) => {
+    if (selectedPostId === postId) {
+      setSelectedPostId(null); // Fechar se já estiver aberto
+    } else {
+      setSelectedPostId(postId); // Abrir
     }
   };
 
-  const handleCloseReactionPopover = () => {
-    setReactionAnchorEl(null);
-    setSelectedPostForReaction(null);
-  };
-
-  const countReactions = (postReactions: any[], type: string) => {
-    if (!postReactions) return 0;
-    return postReactions.filter((reaction) => reaction.type === type).length;
-  };
-
+  // Função para abrir a imagem em fullscreen
   const handleImageClick = (imagePath: string) => {
-    setOpenImageDialog(imagePath); // Armazena a URL da imagem ao clicar
+    setOpenImageDialog(imagePath); // Abrir o dialog com a imagem
   };
 
+  // Função para fechar o dialog de imagem
   const handleCloseImageDialog = () => {
-    setOpenImageDialog(null); // Fecha o Dialog ao clicar fora ou no botão de fechar
+    setOpenImageDialog(null);
   };
 
-  const handleOpenReactionMenu = (
+  const handleClick = (
     event: React.MouseEvent<HTMLButtonElement>,
-    post: any
+    postId: string
   ) => {
-    setReactionMenuAnchorEl(event.currentTarget);
-    setSelectedPostForReaction(post);
+    setAnchorEl(event.currentTarget);
+    setSelectedPost(postId);
   };
 
-  const handleCloseReactionMenu = () => {
-    setReactionMenuAnchorEl(null);
-    setSelectedPostForReaction(null);
+  const handleClose = () => {
+    setAnchorEl(null);
+    setSelectedPost(null);
   };
 
-  const handleReaction = async (reactionType: string) => {
-    if (!selectedPostForReaction) return;
-    const token = localStorage.getItem("token");
+  const handleEdit = (postId: string, titulo: string, conteudo: string) => {
+    setEditingPostId(postId);
+    setEditedTitulo(titulo);
+    setEditedConteudo(conteudo);
+    handleClose();
+  };
 
+  const handleSaveEdit = async (postId: string) => {
     try {
-      await axios.post(
-        `${baseURL}/posts/${selectedPostForReaction.id}/reactions`,
-        { type: reactionType },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      await axios.put(`${baseURL}/posts/${postId}`, {
+        titulo: editedTitulo,
+        conteudo: editedConteudo,
+      });
+
+      // Atualiza a lista de posts localmente
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post.id === postId
+            ? { ...post, titulo: editedTitulo, conteudo: editedConteudo }
+            : post
+        )
       );
-      toast.success(`Reagiu com ${reactionType}!`);
-      handleCloseReactionMenu();
+      setEditingPostId(null);
+      toast.success("Post editado com sucesso!");
     } catch (error) {
-      toast.error("Erro ao adicionar reação.");
+      toast.error("Erro ao editar post");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (selectedPost) {
+      try {
+        await axios.delete(`${baseURL}/posts/${selectedPost}`);
+        setPosts(posts.filter((post) => post.id !== selectedPost));
+        toast.success("Post deletado com sucesso!");
+        handleClose();
+      } catch (error: any) {
+        console.error("Erro ao deletar post:", error); // Log detalhado do erro
+        // Verifique se o objeto error tem uma resposta
+        if (error.response) {
+          console.error("Detalhes do erro:", error.response.data);
+        }
+        const errorMessage =
+          error.response?.data?.message || "Erro ao deletar post";
+        toast.error(errorMessage);
+      }
     }
   };
 
   return (
     <Box padding={2}>
-      <Typography
-        variant="h6"
-        gutterBottom
-        sx={{ color: "#0B68A9", fontWeight: "bold" }}
-      >
+      <Typography variant="h6" sx={{ color: "#0B68A9", fontWeight: "bold" }}>
         Postagens
       </Typography>
       <List>
-        {loading ? (
-          <div>Carregando...</div>
-        ) : (
-          posts.map((post) => {
-            const postComments = comments[post.id] || [];
+        {posts.map((post) => (
+          <ListItem key={post.id} sx={{ padding: "20px" }}>
+            <Card
+              sx={{
+                width: "100%",
+                borderRadius: "12px",
+                border: "2px solid #FF9D12", // Borda laranja
+                padding: "16px",
+              }}
+            >
+              <IconButton
+                onClick={(event) => handleClick(event, post.id)}
+                sx={{ position: "absolute", top: "16px", right: "16px" }}
+              >
+                <MoreVertIcon />
+              </IconButton>
 
-            return (
-              <ListItem key={post.id} sx={{ padding: "20px" }}>
-                <Card
-                  variant="outlined"
-                  sx={{
-                    width: "100%",
-                    borderRadius: "12px",
-                    border: "2px solid #FF9D12",
-                    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-                    padding: "16px",
-                    backgroundColor: "#ffffff",
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl) && selectedPost === post.id}
+                onClose={handleClose}
+              >
+                <MenuItem
+                  onClick={() =>
+                    handleEdit(post.id, post.titulo, post.conteudo)
+                  }
+                >
+                  <EditIcon sx={{ marginRight: "8px" }} />
+                  Editar
+                </MenuItem>
+                <MenuItem onClick={handleDelete}>
+                  <DeleteIcon sx={{ marginRight: "8px" }} />
+                  Excluir
+                </MenuItem>
+              </Menu>
+
+              <Typography
+                variant="h5"
+                sx={{ fontWeight: "bold", color: "#0B68A9" }}
+              >
+                {post.titulo}
+              </Typography>
+
+              {/* Exibir imagem do post */}
+              {post.imagePath && (
+                <Box
+                  sx={{ cursor: "pointer", textAlign: "center" }}
+                  onClick={() => handleImageClick(post.imagePath)}
+                >
+                  <img
+                    src={post.imagePath}
+                    alt={post.titulo}
+                    style={{
+                      width: "100%",
+                      maxHeight: "380px",
+                      objectFit: "cover",
+                      borderRadius: "8px",
+                    }}
+                  />
+                </Box>
+              )}
+
+              <Typography
+                variant="body1"
+                sx={{ color: "#555", marginTop: "8px" }}
+              >
+                {post.conteudo}
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{ color: "#333", marginTop: "8px", fontSize: "14px" }}
+              >
+                {new Date(post.created_at).toLocaleString()}
+              </Typography>
+
+              {/* Exibir o último comentário */}
+              <Box mt={2}>
+                <Typography variant="subtitle2">
+                  Último comentário:{" "}
+                  {post.comments && post.comments.length > 0
+                    ? `${
+                        post.comments[post.comments.length - 1].user.usuario
+                      }: ${post.comments[post.comments.length - 1].content}`
+                    : "Sem comentários"}
+                </Typography>
+              </Box>
+
+              {/* Ícones de reações e comentários */}
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: "16px",
+                }}
+              >
+                <Box>
+                  {/* Abrir/fechar campo de comentário */}
+                  <IconButton onClick={() => toggleCommentSection(post.id)}>
+                    <TextsmsSharpIcon sx={{ color: "#0B68A9" }} />
+                  </IconButton>
+
+                  {/* Ícone para abrir a lista de todos os comentários */}
+                  {post.comments && post.comments.length > 0 && (
+                    <IconButton
+                      onClick={(event) => handleShowComments(event, post)}
+                    >
+                      <RemoveRedEyeIcon sx={{ color: "#0B68A9" }} />
+                    </IconButton>
+                  )}
+
+                  {/* Ícone para ver quem reagiu */}
+                  <IconButton
+                    onClick={(event) => {
+                      setSelectedReactionPost(post);
+                      setReactionAnchorEl(event.currentTarget);
+                    }}
+                  >
+                    <PeopleIcon sx={{ color: "#0B68A9" }} />
+                  </IconButton>
+                </Box>
+
+                {/* Botão para abrir o menu de reações */}
+                <IconButton
+                  onClick={(event) => {
+                    setSelectedReactionPost(post);
+                    setReactionMenuAnchorEl(event.currentTarget);
                   }}
                 >
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      fontWeight: "bold",
-                      color: "#0B68A9",
-                      padding: "10px",
-                    }}
+                  <ThumbUpIcon sx={{ fontSize: 48, color: "#0095FF" }} />
+                </IconButton>
+              </Box>
+
+              {/* Campo de comentário */}
+              {selectedPostId === post.id && (
+                <CommentSection
+                  postId={post.id}
+                  newComment={newComment}
+                  handleCommentChange={(e) => setNewComment(e.target.value)}
+                  handleAddComment={handleAddComment}
+                />
+              )}
+
+              {/* Exibir contagem de reações com emojis */}
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "start",
+                  marginTop: "8px",
+                }}
+              >
+                <Typography variant="body2">
+                  👍 {countReactions(post.reactions, "like")} ❤️{" "}
+                  {countReactions(post.reactions, "love")} 😂{" "}
+                  {countReactions(post.reactions, "haha")}
+                </Typography>
+              </Box>
+
+              {/* Seção de edição do post */}
+              {editingPostId === post.id && (
+                <>
+                  <TextField
+                    label="Título"
+                    variant="outlined"
+                    fullWidth
+                    value={editedTitulo}
+                    onChange={(e) => setEditedTitulo(e.target.value)}
+                    sx={{ marginBottom: "10px" }}
+                  />
+                  <TextField
+                    label="Conteúdo"
+                    variant="outlined"
+                    fullWidth
+                    multiline
+                    rows={4}
+                    value={editedConteudo}
+                    onChange={(e) => setEditedConteudo(e.target.value)}
+                    sx={{ marginBottom: "10px" }}
+                  />
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => handleSaveEdit(post.id)}
                   >
-                    {post.titulo}
-                  </Typography>
-
-                  {/* Exibe a imagem do post, se houver */}
-                  {post.imagePath && (
-                    <Box
-                      onClick={() => handleImageClick(post.imagePath)} // Ao clicar na imagem, abre o Dialog
-                      sx={{
-                        marginBottom: "16px",
-                        cursor: "pointer",
-                        textAlign: "center",
-                        height: "350px",
-                        width: "100%",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <img
-                        src={post.imagePath}
-                        alt={post.titulo}
-                        style={{
-                          width: "100%",
-                          height: "auto",
-                          maxHeight: "350px",
-                          objectFit: "cover",
-                          borderRadius: "8px",
-                        }}
-                      />
-                    </Box>
-                  )}
-
-                  <Typography
-                    variant="body1"
-                    sx={{ color: "#555", marginTop: "8px" }}
+                    Salvar
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    onClick={() => setEditingPostId(null)}
+                    sx={{ marginLeft: "10px" }}
                   >
-                    {post.conteudo}
-                  </Typography>
-
-                  <Typography
-                    variant="caption"
-                    sx={{ color: "#333", marginTop: "8px", fontSize: "14px" }}
-                  >
-                    {new Date(post.created_at).toLocaleString()}
-                  </Typography>
-
-                  {/* Alinhando todos os ícones na horizontal */}
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-around", // Para alinhar os ícones na horizontal
-                      marginTop: 2,
-                    }}
-                  >
-                    {/* Ícone "+" para mostrar todos os comentários */}
-                    {postComments.length > 0 && (
-                      <IconButton
-                        onClick={(event) => handleShowAllComments(event, post)}
-                      >
-                        <AddCircleOutlineIcon />
-                      </IconButton>
-                    )}
-
-                    {/* Ícone para abrir o campo de comentário */}
-                    <IconButton onClick={() => handleCommentIconClick(post.id)}>
-                      <CommentIcon />
-                    </IconButton>
-
-                    {/* Ícone de pessoas para mostrar reações */}
-                    <IconButton
-                      onClick={(event) => handleReactionClick(event, post)}
-                    >
-                      <PeopleIcon sx={{ color: "#FF9D12" }} />
-                    </IconButton>
-
-                    {/* Botão para abrir o menu de reações */}
-                    <IconButton
-                      onClick={(event) => handleOpenReactionMenu(event, post)}
-                    >
-                      <EmojiEmotionsIcon sx={{ color: "#FF9D12" }} />
-                    </IconButton>
-
-                    {/* Contagem de reações organizadas */}
-                    <Typography variant="body2" sx={{ color: "#333" }}>
-                      👍 {countReactions(post.reactions, "like")} ❤️{" "}
-                      {countReactions(post.reactions, "love")} 😂{" "}
-                      {countReactions(post.reactions, "haha")}
-                    </Typography>
-                  </Box>
-
-                  {/* Campo para adicionar comentário, visível apenas para o post selecionado */}
-                  {selectedPostId === post.id && (
-                    <Box mt={2}>
-                      <TextField
-                        label="Adicionar comentário"
-                        fullWidth
-                        multiline
-                        rows={2}
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                      />
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => handleAddComment(post.id)}
-                        sx={{ marginTop: "10px" }}
-                      >
-                        Comentar
-                      </Button>
-                    </Box>
-                  )}
-                </Card>
-              </ListItem>
-            );
-          })
-        )}
+                    Cancelar
+                  </Button>
+                </>
+              )}
+            </Card>
+          </ListItem>
+        ))}
       </List>
 
-      {/* Popover para exibir todos os comentários */}
-      <Popover
-        open={Boolean(anchorEl)}
-        anchorEl={anchorEl}
-        onClose={handleClosePopover}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "left",
-        }}
-      >
-        <Box sx={{ padding: 2 }}>
-          <Typography variant="h6">Todos os comentários</Typography>
-          {popoverPost &&
-          popoverPost.id &&
-          comments[popoverPost.id].length > 0 ? (
-            comments[popoverPost.id].map((comment: any, index: any) => (
-              <Typography key={index}>
-                {comment.user
-                  ? `${comment.user.usuario}: ${comment.content}`
-                  : "Usuário desconhecido"}
-              </Typography>
-            ))
-          ) : (
-            <Typography>Nenhum comentário disponível</Typography>
-          )}
-        </Box>
-      </Popover>
-
-      {/* Popover para exibir quem reagiu */}
-      <Popover
-        open={Boolean(reactionAnchorEl)}
-        anchorEl={reactionAnchorEl}
-        onClose={handleCloseReactionPopover}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "left",
-        }}
-      >
-        <Box sx={{ padding: 2 }}>
-          <Typography variant="h6">Reações</Typography>
-          {reactions.length > 0 ? (
-            reactions.map((reaction: any, index: any) => (
-              <Typography key={index}>
-                {reaction.user
-                  ? `${reaction.user.usuario} reagiu com ${reaction.type}`
-                  : "Usuário desconhecido"}
-              </Typography>
-            ))
-          ) : (
-            <Typography>Nenhuma reação</Typography>
-          )}
-        </Box>
-      </Popover>
-
-      {/* Menu para adicionar reações */}
-      <Menu
+      {/* Popover para o menu de reações */}
+      <ReactionMenu
         anchorEl={reactionMenuAnchorEl}
-        open={Boolean(reactionMenuAnchorEl)}
-        onClose={handleCloseReactionMenu}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "left",
-        }}
-      >
-        <MenuItem onClick={() => handleReaction("like")}>
-          <ThumbUpIcon sx={{ marginRight: "8px" }} /> Curtir
-        </MenuItem>
-        <MenuItem onClick={() => handleReaction("love")}>
-          <FavoriteIcon sx={{ marginRight: "8px" }} /> Amar
-        </MenuItem>
-        <MenuItem onClick={() => handleReaction("haha")}>
-          <SentimentSatisfiedAltIcon sx={{ marginRight: "8px" }} /> Haha
-        </MenuItem>
-      </Menu>
+        handleClose={() => setReactionMenuAnchorEl(null)}
+        handleReaction={handleReaction}
+      />
 
-      {/* Dialog para imagem em tela cheia */}
+      {/* Popover para mostrar quem reagiu */}
+      <ReactionList
+        anchorEl={reactionAnchorEl}
+        selectedReactionPost={selectedReactionPost}
+        handleClose={() => setReactionAnchorEl(null)}
+      />
+
+      {/* Popover para mostrar todos os comentários */}
+      <CommentList
+        anchorEl={commentListAnchorEl}
+        selectedPost={selectedCommentPost}
+        handleClose={() => setCommentListAnchorEl(null)}
+      />
+
+      {/* Dialog para exibir a imagem em fullscreen */}
       <Dialog
         open={Boolean(openImageDialog)}
         onClose={handleCloseImageDialog}
@@ -453,7 +498,7 @@ const PostList: React.FC = () => {
             justifyContent: "center",
             alignItems: "center",
             padding: 0,
-            backgroundColor: "#000", // Define um fundo escuro para destacar a imagem
+            backgroundColor: "#000", // Fundo escuro para destacar a imagem
           }}
         >
           {openImageDialog && (
@@ -462,8 +507,8 @@ const PostList: React.FC = () => {
               alt="Fullscreen"
               style={{
                 maxWidth: "100%",
-                maxHeight: "90vh", // Limita a altura para caber na tela
-                objectFit: "contain", // Mantém a proporção da imagem
+                maxHeight: "380px", // Limitar a altura para caber na tela
+                objectFit: "contain", // Manter a proporção da imagem
               }}
             />
           )}
@@ -474,8 +519,6 @@ const PostList: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <ToastContainer />
     </Box>
   );
 };
