@@ -79,77 +79,83 @@ const PostList: React.FC = () => {
     }
   };
 
-  const fetchPostsWithComments = async (page: number) => {
-    const start = performance.now();
+  // Função que busca posts e comentários
+  const fetchPostsWithComments = useCallback(async (page: number) => {
     setLoadingPosts(true);
-
+    console.log(`Fetching posts for page: ${page}`); // Verificar qual página está sendo solicitada
+  
     try {
-      // Chamada à API para buscar os posts da página atual com limite
       const response = await axios.get(`${baseURL}/posts`, {
         params: {
           page: page, // Página atual
           limit: postsPerPage, // Limite de posts por página
         },
       });
-
-      // Verificar se response.data é um array ou se a resposta tem posts dentro de um objeto
+  
+      // Log detalhado da resposta da API
+      console.log("Resposta da API:", response.data);
+  
+      // Verificar se a estrutura de resposta contém 'posts' diretamente ou dentro de um objeto
       const postsArray = Array.isArray(response.data.posts)
         ? response.data.posts
         : response.data;
-
-      if (!postsArray) {
-        throw new Error("Estrutura inesperada na resposta da API");
+  
+      if (!postsArray || postsArray.length === 0) {
+        console.warn("Nenhum post encontrado ou estrutura inesperada.");
+        setPosts([]); // Define a lista como vazia
+        return;
       }
-
-      // Buscar comentários para cada post e adicionar ao post
+  
+      // Buscar comentários para cada post
       const postsData = await Promise.all(
         postsArray.map(async (post: any) => {
           const comments = await fetchComments(post.id);
           return { ...post, comments };
         })
       );
-
-      // Atualizar os posts exibidos
+  
+      // Atualizar o estado com os posts e o total de páginas
+      console.log("Posts obtidos com comentários:", postsData);
       setPosts(postsData);
-
-      // Atualizar o total de páginas com base no número total de posts (usando o campo total da resposta)
-      setTotalPages(Math.ceil(response.data.total / postsPerPage)); // Certifique-se que a API está retornando o campo `total`
+      setTotalPages(Math.ceil(response.data.total / postsPerPage)); // Total de páginas com base na resposta da API
     } catch (error) {
       console.error("Erro ao buscar postagens", error);
     } finally {
       setLoadingPosts(false);
+      console.log("Carregamento de posts finalizado");
     }
-
-    const end = performance.now();
-    console.log(`fetchPostsWithComments levou ${end - start} ms`);
-  };
-
-  // Chamada ao useEffect
+  }, [postsPerPage]); // Apenas depende de `postsPerPage`
+  
+  // useEffect para ouvir a mudança da página e buscar os posts
   useEffect(() => {
     fetchPostsWithComments(currentPage);
-
+  
+    // Socket para novos posts
     socket.on("new-post", (newPost) => {
+      console.log("Novo post recebido via socket:", newPost);
       setPosts((prevPosts) => [newPost, ...prevPosts]);
       toast.info("Novo post adicionado!");
     });
-
+  
+    // Socket para atualizações de reações
     socket.on("post-reaction-updated", (updatedPost) => {
+      console.log("Reação de post atualizada via socket:", updatedPost);
       setPosts((prevPosts) => {
         const updatedPosts = prevPosts.map((post) =>
           post.id === updatedPost.id
-            ? { ...post, reactions: updatedPost.reactions } // Atualiza apenas as reações, mantém os comentários
+            ? { ...post, reactions: updatedPost.reactions }
             : post
         );
         return updatedPosts;
       });
     });
-    
-
+  
     return () => {
       socket.off("new-post");
       socket.off("post-reaction-updated");
     };
-  }, [currentPage]);
+  }, [currentPage, fetchPostsWithComments]);
+
 
   const handleOpenToast = (message: string, emoji: string) => {
     toast(`${emoji} ${message}`, {
