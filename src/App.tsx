@@ -96,7 +96,7 @@ const App: React.FC = () => {
       style={{
         padding: "20px",
         textAlign: "center",
-        backgroundColor: "#f0f0f0",
+        backgroundColor: "#F1F2F4",
         minHeight: "100vh",
       }}
     >

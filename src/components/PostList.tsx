@@ -17,6 +17,7 @@ import {
   TextField,
   CircularProgress,
   Pagination,
+  LinearProgress,
 } from "@mui/material";
 import PeopleIcon from "@mui/icons-material/People";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
@@ -31,6 +32,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { toast, ToastContainer } from "react-toastify";
 import { debounce } from "lodash";
+import { Snackbar } from "@mui/material";
+
 
 const baseURL = "https://cemear-b549eb196d7c.herokuapp.com";
 const socket = io(baseURL, { path: "/socket.io" });
@@ -58,6 +61,10 @@ const PostList: React.FC = () => {
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editedTitulo, setEditedTitulo] = useState<string>("");
   const [editedConteudo, setEditedConteudo] = useState<string>("");
+  const [loading, setLoading] = useState(false); 
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
+  const [reactionEmoji, setReactionEmoji] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const postsPerPage = 7;
@@ -129,11 +136,14 @@ const PostList: React.FC = () => {
     socket.on("post-reaction-updated", (updatedPost) => {
       setPosts((prevPosts) => {
         const updatedPosts = prevPosts.map((post) =>
-          post.id === updatedPost.id ? updatedPost : post
+          post.id === updatedPost.id
+            ? { ...post, reactions: updatedPost.reactions } // Atualiza apenas as reações, mantém os comentários
+            : post
         );
         return updatedPosts;
       });
     });
+    
 
     return () => {
       socket.off("new-post");
@@ -141,31 +151,69 @@ const PostList: React.FC = () => {
     };
   }, [currentPage]);
 
-  const handleReaction = useCallback(
-    async (reactionType: string) => {
-      const start = performance.now();
+  const handleOpenToast = (message: string, emoji: string) => {
+    toast(`${emoji} ${message}`, {
+      position: "top-center", // Exibe no topo central
+      autoClose: 3000,        // Fecha automaticamente após 3 segundos
+      hideProgressBar: false, // Exibe a barra de progresso
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+    });
+  };
 
-      if (!selectedReactionPost) return;
-      const token = localStorage.getItem("token");
+// Função para abrir o Snackbar com emoji
+const handleOpenSnackbar = (message: string, emoji: string) => {
+  setSnackbarMessage(message);
+  setReactionEmoji(emoji); // Define o emoji
+  setOpenSnackbar(true);
+};
 
-      try {
-        await axios.post(
-          `${baseURL}/posts/${selectedReactionPost.id}/reaction`,
-          { type: reactionType },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+// Função para fechar o Snackbar
+const handleCloseSnackbar = () => {
+  setOpenSnackbar(false);
+};
 
-        toast.success(`Reagiu com ${reactionType}!`);
-        handleCloseReactionMenu();
-      } catch (error) {
-        toast.error("Erro ao adicionar reação.");
-      }
+// Função de handleReaction adaptada para incluir o emoji
+const handleReaction = useCallback(
+  async (reactionType: string) => {
+    const start = performance.now();
 
-      const end = performance.now();
-      console.log(`handleReaction levou ${end - start} ms`);
-    },
-    [selectedReactionPost]
-  );
+    if (!selectedReactionPost) return;
+    const token = localStorage.getItem("token");
+
+    try {
+      const response = await axios.post(
+        `${baseURL}/posts/${selectedReactionPost.id}/reaction`,
+        { type: reactionType },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post.id === selectedReactionPost.id
+            ? { ...post, reactions: response.data.reactions, comments: post.comments }
+            : post
+        )
+      );
+
+      // Define o emoji correspondente à reação
+      const reactionEmoji = reactionType === "like" ? "👍" :
+                            reactionType === "love" ? "❤️" :
+                            reactionType === "haha" ? "😂" : "";
+
+      handleOpenSnackbar(`Reagiu com ${reactionType}!`, reactionEmoji); // Exibe a mensagem com o emoji
+      handleCloseReactionMenu();
+    } catch (error) {
+      handleOpenSnackbar("Erro ao adicionar reação.", "❌");
+    }
+
+    const end = performance.now();
+    console.log(`handleReaction levou ${end - start} ms`);
+  },
+  [selectedReactionPost]
+);
 
   const handleCloseReactionMenu = () => {
     setReactionMenuAnchorEl(null);
@@ -176,9 +224,11 @@ const PostList: React.FC = () => {
   // Função para adicionar um comentário
   const handleAddComment = useCallback(async () => {
     const start = performance.now(); // Início da medição
-
+  
     const token = localStorage.getItem("token");
+  
     if (selectedPostId && newComment.trim()) {
+      setLoading(true); // Ativa o loading antes de começar a requisição
       try {
         await axios.post(
           `${baseURL}/posts/${selectedPostId}/comments`,
@@ -187,9 +237,9 @@ const PostList: React.FC = () => {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-
+  
         const updatedComments = await fetchComments(selectedPostId);
-
+  
         setPosts((prevPosts) => {
           const updatedPosts = prevPosts.map((post) =>
             post.id === selectedPostId
@@ -198,16 +248,23 @@ const PostList: React.FC = () => {
           );
           return updatedPosts;
         });
-
+  
+        // Limpa o comentário após envio bem-sucedido
         setNewComment("");
+        setSelectedPostId(null); // Fecha o campo de comentário
+        toast.success("Comentário adicionado com sucesso!"); // Adiciona o toast de sucesso
       } catch (error) {
         console.error("Erro ao adicionar comentário", error);
+        toast.error("Erro ao adicionar comentário"); // Adiciona o toast de erro
+      } finally {
+        setLoading(false); // Desativa o loading após o término da requisição
       }
     }
-
+  
     const end = performance.now(); // Fim da medição
     console.log(`handleAddComment levou ${end - start} ms`);
   }, [selectedPostId, newComment]);
+  
 
   const handleClick = (
     event: React.MouseEvent<HTMLButtonElement>,
@@ -311,9 +368,57 @@ const PostList: React.FC = () => {
 
   return (
     <Box padding={2}>
+      <ToastContainer 
+        position="top-right"  // Posição do toast na tela
+        autoClose={3000}      // Tempo para fechar automaticamente
+        hideProgressBar       // Oculta a barra de progresso
+        newestOnTop           // Exibe o toast mais novo no topo
+        closeOnClick          // Fecha ao clicar
+        rtl={false}           // Direção esquerda para direita
+        pauseOnFocusLoss      // Pausa quando a aba perde o foco
+        draggable             // Permite arrastar o toast
+        pauseOnHover          // Pausa quando o mouse passa por cima
+      />
+
       <Typography variant="h6" sx={{ color: "#0B68A9", fontWeight: "bold" }}>
         Postagens
       </Typography>
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={3000} // O Snackbar fecha automaticamente após 3 segundos
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }} // Alinha no topo
+        message={
+          <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ width: '100%' }}>
+            <span>{reactionEmoji} {snackbarMessage}</span>
+            <LinearProgress
+              variant="determinate"
+              value={100} // Valor inicial 100%
+              sx={{
+                flexGrow: 1,
+                height: "5px",
+                backgroundColor: "#e0e0e0", // Cor do fundo da barra
+                marginLeft: "10px", // Espaço entre texto e barra
+                "& .MuiLinearProgress-bar": {
+                  backgroundColor: "#1976d2", // Cor da barra que diminui
+                  animationDuration: "3s", // Define a animação para 3 segundos
+                  animationTimingFunction: "linear",
+                }
+              }}
+            />
+          </Box>
+        }
+        sx={{
+          backgroundColor: "#fff", // Cor branca para o fundo do Snackbar
+          color: "#333", // Texto em cinza escuro
+          borderRadius: "8px",
+          boxShadow: "0px 3px 5px rgba(0, 0, 0, 0.2)", // Sombra leve
+          padding: "10px 20px", // Espaçamento interno
+        }}
+      />
+
+
+
 
       {loadingPosts ? (
         <Box
@@ -433,29 +538,30 @@ const PostList: React.FC = () => {
                     <Box>
                       <IconButton onClick={() => toggleCommentSection(post.id)}>
                         <TextsmsSharpIcon
-                          sx={{ fontSize: 34.5, color: "#0B68A9" }}
+                          sx={{ fontSize: 35, color: "#0B68A9" }}
                         />
                       </IconButton>
-
-                      {post.comments && post.comments.length > 0 && (
-                        <IconButton
-                          onClick={(event) => handleShowComments(event, post)}
-                        >
-                          <RemoveRedEyeIcon
-                            sx={{ fontSize: 34.5, color: "#0B68A9" }}
-                          />
-                        </IconButton>
-                      )}
-
                       <IconButton
                         onClick={(event) => {
                           setSelectedReactionPost(post);
                           setReactionAnchorEl(event.currentTarget);
                         }}
                       >
-                        <PeopleIcon sx={{ fontSize: 34.5, color: "#0B68A9" }} />
+                        <PeopleIcon sx={{ fontSize: 35, color: "#0B68A9" }} />
                       </IconButton>
                     </Box>
+
+                      {post.comments && post.comments.length > 0 && (
+                        <IconButton
+                          onClick={(event) => handleShowComments(event, post)}
+                        >
+                          <RemoveRedEyeIcon
+                            sx={{ fontSize: 35, color: "#0B68A9" }}
+                          />
+                        </IconButton>
+                      )}
+
+                      
 
                     <IconButton
                       onClick={(event) => {
@@ -463,32 +569,39 @@ const PostList: React.FC = () => {
                         setReactionMenuAnchorEl(event.currentTarget);
                       }}
                     >
-                      <ThumbUpIcon sx={{ fontSize: 48, color: "#0095FF" }} />
+                      <ThumbUpIcon sx={{ fontSize: 55, color: "#0095FF" }} />
                     </IconButton>
                   </Box>
 
                   {selectedPostId === post.id && (
                     <CommentSection
-                      postId={post.id}
-                      newComment={newComment}
-                      handleCommentChange={(e) => setNewComment(e.target.value)}
-                      handleAddComment={handleAddComment}
-                    />
+                    postId={post.id}
+                    newComment={newComment}
+                    handleCommentChange={(e) => setNewComment(e.target.value)}
+                    handleAddComment={handleAddComment} // Remove o argumento aqui
+                    loading={loading} // Passa o estado de loading
+                  />
+                  
+                  
+                  
                   )}
 
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "start",
-                      marginTop: "8px",
-                    }}
-                  >
-                    <Typography variant="body2">
-                      👍 {countReactions(post.reactions, "like")} ❤️{" "}
-                      {countReactions(post.reactions, "love")} 😂{" "}
-                      {countReactions(post.reactions, "haha")}
-                    </Typography>
-                  </Box>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "start",
+                            marginTop: "8px",
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{ fontSize: "1rem" }} // Aumenta o tamanho dos emojis e do texto
+                          >
+                            👍 {countReactions(post.reactions, "like")} {" "}
+                            ❤️ {countReactions(post.reactions, "love")} {" "}
+                            😂 {countReactions(post.reactions, "haha")}
+                          </Typography>
+                        </Box>
 
                   {editingPostId === post.id && (
                     <>

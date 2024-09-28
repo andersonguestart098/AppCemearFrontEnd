@@ -19,9 +19,24 @@ const ReactionMenu: React.FC<ReactionMenuProps> = React.memo(
       }}
     >
       <Box sx={{ display: "flex", flexDirection: "row", p: 1 }}>
-        <IconButton onClick={() => handleReaction("like")}>👍</IconButton>
-        <IconButton onClick={() => handleReaction("love")}>❤️</IconButton>
-        <IconButton onClick={() => handleReaction("haha")}>😂</IconButton>
+        <IconButton
+          sx={{ fontSize: 30, color: "#f1c40f" }} // Cor viva para o 'like'
+          onClick={() => handleReaction("like")}
+        >
+          👍
+        </IconButton>
+        <IconButton
+          sx={{ fontSize: 30, color: "#e74c3c" }} // Cor viva para o 'love'
+          onClick={() => handleReaction("love")}
+        >
+          ❤️
+        </IconButton>
+        <IconButton
+          sx={{ fontSize: 30, color: "#f39c12" }} // Cor viva para o 'haha'
+          onClick={() => handleReaction("haha")}
+        >
+          😂
+        </IconButton>
       </Box>
     </Popover>
   )
