@@ -19,10 +19,10 @@ import {
   Pagination,
   LinearProgress,
 } from "@mui/material";
-import PeopleIcon from "@mui/icons-material/People";
+import SentimentVerySatisfiedSharpIcon from '@mui/icons-material/SentimentVerySatisfiedSharp';
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
-import TextsmsSharpIcon from "@mui/icons-material/TextsmsSharp";
-import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
+import AddCommentSharpIcon from '@mui/icons-material/AddCommentSharp';
+import MarkUnreadChatAltSharpIcon from '@mui/icons-material/MarkUnreadChatAltSharp';
 import CommentSection from "./CommentSection";
 import ReactionMenu from "./ReactionMenu";
 import ReactionList from "./ReactionList";
@@ -33,6 +33,10 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { toast, ToastContainer } from "react-toastify";
 import { debounce } from "lodash";
 import { Snackbar } from "@mui/material";
+import MarkChatReadSharpIcon from '@mui/icons-material/MarkChatReadSharp';
+import useNewPostChecker from "../useNewPostChecker";
+import PublishedWithChangesSharpIcon from '@mui/icons-material/PublishedWithChangesSharp';
+
 
 
 const baseURL = "https://cemear-b549eb196d7c.herokuapp.com";
@@ -67,7 +71,7 @@ const PostList: React.FC = () => {
   const [reactionEmoji, setReactionEmoji] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const postsPerPage = 7;
+  const postsPerPage = 10;
 
   const fetchComments = async (postId: string) => {
     try {
@@ -85,6 +89,7 @@ const PostList: React.FC = () => {
     console.log(`Fetching posts for page: ${page}`); // Verificar qual página está sendo solicitada
   
     try {
+      // Faz a requisição para buscar os posts da página atual
       const response = await axios.get(`${baseURL}/posts`, {
         params: {
           page: page, // Página atual
@@ -102,15 +107,26 @@ const PostList: React.FC = () => {
   
       if (!postsArray || postsArray.length === 0) {
         console.warn("Nenhum post encontrado ou estrutura inesperada.");
-        setPosts([]); // Define a lista como vazia
+        setPosts([]); // Define a lista como vazia se não houver posts
         return;
       }
   
-      // Buscar comentários para cada post
+      // Buscar comentários para cada post em ordem decrescente (se já não estiver sendo ordenado no backend)
       const postsData = await Promise.all(
         postsArray.map(async (post: any) => {
-          const comments = await fetchComments(post.id);
-          return { ...post, comments };
+          try {
+            const commentsResponse = await axios.get(`${baseURL}/posts/${post.id}/comments`);
+            const comments = commentsResponse.data;
+  
+            // Atualiza o estado de imagem em carregamento
+            setImageLoading((prev) => ({ ...prev, [post.id]: true })); 
+  
+            // Retorna o post com seus comentários já ordenados
+            return { ...post, comments: comments.reverse() }; // Se a API não ordenar, fazemos isso aqui
+          } catch (error) {
+            console.error(`Erro ao buscar comentários para o post ${post.id}`, error);
+            return { ...post, comments: [] }; // Retorna o post sem comentários em caso de erro
+          }
         })
       );
   
@@ -125,6 +141,7 @@ const PostList: React.FC = () => {
       console.log("Carregamento de posts finalizado");
     }
   }, [postsPerPage]); // Apenas depende de `postsPerPage`
+  
   
   // useEffect para ouvir a mudança da página e buscar os posts
   useEffect(() => {
@@ -157,24 +174,16 @@ const PostList: React.FC = () => {
   }, [currentPage, fetchPostsWithComments]);
 
 
-  const handleOpenToast = (message: string, emoji: string) => {
-    toast(`${emoji} ${message}`, {
-      position: "top-center", // Exibe no topo central
-      autoClose: 3000,        // Fecha automaticamente após 3 segundos
-      hideProgressBar: false, // Exibe a barra de progresso
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-    });
-  };
-
 // Função para abrir o Snackbar com emoji
-const handleOpenSnackbar = (message: string, emoji: string) => {
+// Função para abrir o Snackbar com emoji opcional
+// Função para abrir o Snackbar com emoji opcional
+const handleOpenSnackbar = (message: string, emoji: string = "") => {
   setSnackbarMessage(message);
-  setReactionEmoji(emoji); // Define o emoji
+  setReactionEmoji(emoji); // Define o emoji, pode ser vazio
   setOpenSnackbar(true);
 };
+
+
 
 // Função para fechar o Snackbar
 const handleCloseSnackbar = () => {
@@ -258,7 +267,11 @@ const handleReaction = useCallback(
         // Limpa o comentário após envio bem-sucedido
         setNewComment("");
         setSelectedPostId(null); // Fecha o campo de comentário
-        toast.success("Comentário adicionado com sucesso!"); // Adiciona o toast de sucesso
+        
+        // Atualizar para exibir um Snackbar de sucesso ao invés de Toast
+        setSnackbarMessage("Comentário adicionado com sucesso!");
+        setReactionEmoji(""); // Nenhum emoji
+        setOpenSnackbar(true); // Abrir o Snackbar
       } catch (error) {
         console.error("Erro ao adicionar comentário", error);
         toast.error("Erro ao adicionar comentário"); // Adiciona o toast de erro
@@ -270,6 +283,7 @@ const handleReaction = useCallback(
     const end = performance.now(); // Fim da medição
     console.log(`handleAddComment levou ${end - start} ms`);
   }, [selectedPostId, newComment]);
+  
   
 
   const handleClick = (
@@ -372,6 +386,12 @@ const handleReaction = useCallback(
     return reactions?.filter((reaction) => reaction.type === type).length || 0;
   };
 
+  const handleOpenImageDialog = (imagePath: string) => {
+    setOpenImageDialog(imagePath);
+  };
+
+  useNewPostChecker(setPosts, handleOpenSnackbar);
+
   return (
     <Box padding={2}>
       <ToastContainer 
@@ -389,40 +409,52 @@ const handleReaction = useCallback(
       <Typography variant="h6" sx={{ color: "#0B68A9", fontWeight: "bold" }}>
         Postagens
       </Typography>
-      <Snackbar
-        open={openSnackbar}
-        autoHideDuration={3000} // O Snackbar fecha automaticamente após 3 segundos
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }} // Alinha no topo
-        message={
-          <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ width: '100%' }}>
-            <span>{reactionEmoji} {snackbarMessage}</span>
-            <LinearProgress
-              variant="determinate"
-              value={100} // Valor inicial 100%
-              sx={{
-                flexGrow: 1,
-                height: "5px",
-                backgroundColor: "#e0e0e0", // Cor do fundo da barra
-                marginLeft: "10px", // Espaço entre texto e barra
-                "& .MuiLinearProgress-bar": {
-                  backgroundColor: "#1976d2", // Cor da barra que diminui
-                  animationDuration: "3s", // Define a animação para 3 segundos
-                  animationTimingFunction: "linear",
-                }
-              }}
-            />
-          </Box>
-        }
+      
+<Snackbar
+  open={openSnackbar}
+  autoHideDuration={3000} // O Snackbar fecha automaticamente após 3 segundos
+  onClose={handleCloseSnackbar}
+  anchorOrigin={{ vertical: 'top', horizontal: 'center' }} // Alinha no topo
+  message={
+    <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ width: '100%' }}>
+      {/* Verifica se é um comentário ou uma atualização de post e mostra o ícone correto */}
+      {reactionEmoji ? (
+        <span>{reactionEmoji} {snackbarMessage}</span> // Exibe o emoji para reações
+      ) : (
+        <Box display="flex" alignItems="center">
+          {snackbarMessage === "Atualizando Post's..." ? (
+            <PublishedWithChangesSharpIcon sx={{ marginRight: "10px", color: "#FF9800" }} /> // Ícone para atualizações de posts
+          ) : (
+            <MarkChatReadSharpIcon sx={{ marginRight: "10px", color: "#4caf50" }} /> // Ícone para comentários ou outras mensagens
+          )}
+          <span>{snackbarMessage}</span>
+        </Box>
+      )}
+      <LinearProgress
+        variant="determinate"
+        value={100} // Valor inicial 100%
         sx={{
-          backgroundColor: "#fff", // Cor branca para o fundo do Snackbar
-          color: "#333", // Texto em cinza escuro
-          borderRadius: "8px",
-          boxShadow: "0px 3px 5px rgba(0, 0, 0, 0.2)", // Sombra leve
-          padding: "10px 20px", // Espaçamento interno
+          flexGrow: 1,
+          height: "5px",
+          backgroundColor: "#e0e0e0", // Cor do fundo da barra
+          marginLeft: "10px", // Espaço entre texto e barra
+          "& .MuiLinearProgress-bar": {
+            backgroundColor: "#1976d2", // Cor da barra que diminui
+            animationDuration: "3s", // Define a animação para 3 segundos
+            animationTimingFunction: "linear",
+          }
         }}
       />
-
+    </Box>
+  }
+  sx={{
+    backgroundColor: "#fff", // Cor branca para o fundo do Snackbar
+    color: "#333", // Texto em cinza escuro
+    borderRadius: "8px",
+    boxShadow: "0px 3px 5px rgba(0, 0, 0, 0.2)", // Sombra leve
+    padding: "10px 20px", // Espaçamento interno
+  }}
+/>
 
 
 
@@ -482,32 +514,36 @@ const handleReaction = useCallback(
                   </Typography>
 
                   {post.imagePath && (
-                    <Box sx={{ position: "relative", textAlign: "center" }}>
-                      {imageLoading[post.id] && (
-                        <CircularProgress
-                          sx={{
-                            position: "absolute",
-                            top: "50%",
-                            left: "50%",
-                            transform: "translate(-50%, -50%)",
+                      <Box sx={{ position: "relative", textAlign: "center" }}>
+                        {imageLoading[post.id] && (
+                          <CircularProgress
+                            sx={{
+                              position: "absolute",
+                              top: "50%",
+                              left: "50%",
+                              transform: "translate(-50%, -50%)",
+                            }}
+                          />
+                        )}
+                        <img
+                          src={post.imagePath}
+                          alt={post.titulo}
+                          style={{
+                            width: "100%",
+                            maxHeight: "380px",
+                            objectFit: "cover",
+                            borderRadius: "8px",
+                            display: post.imagePath ? "block" : "none",
+                            cursor: "pointer", // Isso dá o feedback visual de que a imagem é clicável
                           }}
+                          onClick={() => handleOpenImageDialog(post.imagePath)} // Adicione o evento onClick aqui
+                          onLoad={() => handleImageLoad(post.id)}
+                          onError={() => handleImageError(post.id)}
                         />
-                      )}
-                      <img
-                        src={post.imagePath}
-                        alt={post.titulo}
-                        style={{
-                          width: "100%",
-                          maxHeight: "380px",
-                          objectFit: "cover",
-                          borderRadius: "8px",
-                          display: post.imagePath ? "block" : "none",
-                        }}
-                        onLoad={() => handleImageLoad(post.id)}
-                        onError={() => handleImageError(post.id)}
-                      />
-                    </Box>
-                  )}
+
+                      </Box>
+                    )}
+
 
                   <Typography
                     variant="body1"
@@ -524,7 +560,7 @@ const handleReaction = useCallback(
 
                   <Box mt={2}>
                     <Typography variant="subtitle2">
-                      Último comentário:{" "}
+                      Comentário:{" "}
                       {post.comments && post.comments.length > 0
                         ? `${
                             post.comments[post.comments.length - 1].user.usuario
@@ -543,7 +579,7 @@ const handleReaction = useCallback(
                   >
                     <Box>
                       <IconButton onClick={() => toggleCommentSection(post.id)}>
-                        <TextsmsSharpIcon
+                        <AddCommentSharpIcon
                           sx={{ fontSize: 35, color: "#0B68A9" }}
                         />
                       </IconButton>
@@ -553,7 +589,7 @@ const handleReaction = useCallback(
                           setReactionAnchorEl(event.currentTarget);
                         }}
                       >
-                        <PeopleIcon sx={{ fontSize: 35, color: "#0B68A9" }} />
+                        <SentimentVerySatisfiedSharpIcon sx={{ fontSize: 35, color: "#0B68A9" }} />
                       </IconButton>
                     </Box>
 
@@ -561,7 +597,7 @@ const handleReaction = useCallback(
                         <IconButton
                           onClick={(event) => handleShowComments(event, post)}
                         >
-                          <RemoveRedEyeIcon
+                          <MarkUnreadChatAltSharpIcon
                             sx={{ fontSize: 35, color: "#0B68A9" }}
                           />
                         </IconButton>
@@ -677,39 +713,44 @@ const handleReaction = useCallback(
         handleClose={() => setCommentListAnchorEl(null)}
       />
 
-      <Dialog
-        open={Boolean(openImageDialog)}
-        onClose={handleCloseImageDialog}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogContent
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: 0,
-            backgroundColor: "#000",
+        <Dialog
+          open={Boolean(openImageDialog)}
+          onClose={handleCloseImageDialog}
+          fullScreen // Adiciona esta propriedade para tela cheia
+          PaperProps={{
+            style: {
+              backgroundColor: "black", // Fundo preto para a experiência de visualização
+            },
           }}
         >
-          {openImageDialog && (
-            <img
-              src={openImageDialog}
-              alt="Fullscreen"
-              style={{
-                maxWidth: "100%",
-                maxHeight: "380px",
-                objectFit: "contain",
-              }}
-            />
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseImageDialog} color="primary">
-            Fechar
-          </Button>
-        </DialogActions>
-      </Dialog>
+          <DialogContent
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: 0,
+            }}
+          >
+            {openImageDialog && (
+              <img
+                src={openImageDialog}
+                alt="Fullscreen"
+                style={{
+                  width: "100%",  // Ocupa 100% da largura da tela
+                  height: "100%", // Ocupa 100% da altura da tela
+                  objectFit: "contain", // Garante que a imagem seja dimensionada proporcionalmente
+                }}
+              />
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseImageDialog} color="primary">
+              Fechar
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+
 
       <ToastContainer />
     </Box>
