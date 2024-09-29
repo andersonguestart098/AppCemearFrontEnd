@@ -19,10 +19,71 @@
     <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/logoCE.png" />
     <meta name="apple-mobile-web-app-title" content="CemearApp" />
 
+    <!-- Biblioteca Animate.css -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+    />
+
     <title>Cemear App</title>
+
+    <style>
+      /* Estilo do splash screen */
+      #splash-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #1565c0; /* Cor do fundo do splash */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      #logo-splash {
+        width: 150px;
+        height: 150px;
+      }
+
+      /* Remove splash após animação */
+      #splash-screen.fade-out {
+        animation: fadeOut 1s ease forwards;
+      }
+
+      @keyframes fadeOut {
+        0% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+    </style>
   </head>
+
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="splash-screen">
+      <img
+        src="%PUBLIC_URL%/logoCE.png"
+        alt="Cemear Logo"
+        id="logo-splash"
+        class="animate__animated animate__bounceIn"
+      />
+    </div>
     <div id="root"></div>
+
+    <script>
+      // Função para remover o splash screen após um tempo
+      window.addEventListener('load', () => {
+        const splash = document.getElementById('splash-screen');
+        setTimeout(() => {
+          splash.classList.add('fade-out'); // Adiciona a classe de fade out
+          setTimeout(() => splash.remove(), 1000); // Remove o splash após o fade-out
+        }, 3000); // Exibe o splash por 3 segundos
+      });
+    </script>
   </body>
 </html>
