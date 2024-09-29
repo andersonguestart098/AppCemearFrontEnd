@@ -1,31 +1,64 @@
 import * as React from "react";
-import { useNavigate } from "react-router-dom"; // Certifique-se de que está usando react-router-dom
+import { useNavigate } from "react-router-dom";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
-import IconButton from "@mui/material/IconButton"; // Importando o IconButton do Material-UI
-import LogoutIcon from "@mui/icons-material/Logout"; // Importando o ícone de Logout
-import CircularProgress from "@mui/material/CircularProgress"; // Importando o spinner de carregamento
+import IconButton from "@mui/material/IconButton";
+import LogoutIcon from "@mui/icons-material/Logout";
+import SettingsIcon from "@mui/icons-material/Settings"; // Ícone de configuração
+import CircularProgress from "@mui/material/CircularProgress";
+import Popover from "@mui/material/Popover";
+import Switch from "@mui/material/Switch";
+import Button from "@mui/material/Button";
 
-const logoSrc = "/logo.png"; // Caminho para a logo
+const logoSrc = "/logo.png";
 
 function ResponsiveAppBar() {
-  const navigate = useNavigate(); // Hook para navegação
-  const [loading, setLoading] = React.useState(false); // Estado para controlar o spinner
+  const navigate = useNavigate();
+  const [loading, setLoading] = React.useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = React.useState(
+    Notification.permission === "granted"
+  ); // Verificar se as notificações já foram permitidas
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 
   const handleLogout = () => {
     console.log("Logout chamado");
-    setLoading(true); // Ativa o spinner
-
-    // Simula uma espera antes de fazer o logout para uma transição mais suave
+    setLoading(true);
     setTimeout(() => {
       localStorage.removeItem("token");
-      // Limpar qualquer estado relacionado ao usuário, se aplicável
-      navigate("/login"); // Redirecionar para a página de login
-    }, 1500); // 1,5 segundos para simular uma transição suave
+      navigate("/login");
+    }, 1500);
   };
+
+  const handleSettingsClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const askNotificationPermission = () => {
+    console.log("Verificando permissão para notificações...");
+    if ("Notification" in window && Notification.permission !== "granted") {
+      Notification.requestPermission().then((permission) => {
+        if (permission === "granted") {
+          console.log("Notificações permitidas");
+          setNotificationsEnabled(true); // Atualiza para permitir notificações
+        } else {
+          console.log("Notificações negadas");
+          setNotificationsEnabled(false); // Não permitiu notificações
+        }
+      });
+    } else {
+      console.log("Permissões já concedidas ou notificações não suportadas.");
+    }
+  };
+
+  const open = Boolean(anchorEl);
+  const id = open ? "simple-popover" : undefined;
 
   return (
     <>
@@ -38,7 +71,7 @@ function ResponsiveAppBar() {
           border: "none",
           zIndex: 1000,
           boxShadow: "none",
-          backgroundColor: "#0B68A9", // Usando o azul principal
+          backgroundColor: "#0B68A9",
         }}
       >
         <Container maxWidth="xl">
@@ -51,8 +84,15 @@ function ResponsiveAppBar() {
               <img src={logoSrc} alt="Logo" style={{ width: 125 }} />
             </Box>
 
-            {/* Saudação e ícone de logout alinhados à direita */}
+            {/* Saudação, ícone de configuração e logout alinhados à direita */}
             <Box sx={{ display: "flex", alignItems: "center" }}>
+              <IconButton
+                onClick={handleSettingsClick}
+                sx={{ color: "white", marginRight: "16px" }}
+              >
+                <SettingsIcon />
+              </IconButton>
+
               <IconButton onClick={handleLogout} sx={{ color: "white" }}>
                 <LogoutIcon />
               </IconButton>
@@ -60,6 +100,35 @@ function ResponsiveAppBar() {
           </Toolbar>
         </Container>
       </AppBar>
+
+      {/* Popover de Configurações */}
+      <Popover
+        id={id}
+        open={open}
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "right",
+        }}
+      >
+        <Box p={2}>
+          <Typography variant="h6">Configurações</Typography>
+          <Box display="flex" alignItems="center" mt={2}>
+            <Typography>Permitir Notificações</Typography>
+            <Switch
+              checked={notificationsEnabled}
+              onChange={askNotificationPermission}
+              color="primary"
+              sx={{ marginLeft: "8px" }}
+            />
+          </Box>
+        </Box>
+      </Popover>
 
       {/* Exibir o spinner centralizado quando o estado de loading estiver ativo */}
       {loading && (

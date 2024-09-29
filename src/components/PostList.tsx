@@ -555,13 +555,13 @@ const handleReaction = useCallback(
                   }}
                 >
                   <IconButton
-  onClick={(event) => handleClick(event, post.id)}
-  sx={{ position: "absolute", top: "16px", right: "16px" }}
->
-  {tipoUsuario === "admin" && <MoreVertIcon />}
-</IconButton>
+                    onClick={(event) => handleClick(event, post.id)}
+                    sx={{ position: "absolute", top: "16px", right: "16px" }}
+                  >
+                    {tipoUsuario === "admin" && <MoreVertIcon />}
+                  </IconButton>
 
-{tipoUsuario === 'admin' && (  // Verificação se tipoUsuario é 'admin'
+                  {tipoUsuario === 'admin' && (  // Verificação se tipoUsuario é 'admin'
                 <IconButton
                   onClick={(event) => handleClick(event, post.id)}
                   sx={{ position: "absolute", top: "16px", right: "16px" }}
