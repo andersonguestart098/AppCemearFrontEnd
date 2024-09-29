@@ -493,8 +493,8 @@ const handleReaction = useCallback(
               <span>{reactionEmoji} {snackbarMessage}</span> // Exibe o emoji para reações
             ) : (
               <Box display="flex" alignItems="center">
-                {snackbarMessage === "Atualizando Post's..." ? (
-                  <PublishedWithChangesSharpIcon sx={{ marginRight: "10px", color: "#FF9800" }} /> // Ícone para atualizações de posts
+                {snackbarMessage === "Post's Atualizados!" ? (
+                  <PublishedWithChangesSharpIcon sx={{ marginRight: "10px", color: "#4caf50" }} /> // Ícone para atualizações de posts
                 ) : snackbarMessage.includes("editado") ? (
                   <EditIcon sx={{ marginRight: "10px", color: "#4caf50" }} /> // Ícone para edição de posts
                 ) : snackbarMessage.includes("deletado") ? (
