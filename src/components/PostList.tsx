@@ -36,6 +36,8 @@ import { Snackbar } from "@mui/material";
 import MarkChatReadSharpIcon from '@mui/icons-material/MarkChatReadSharp';
 import useNewPostChecker from "../useNewPostChecker";
 import PublishedWithChangesSharpIcon from '@mui/icons-material/PublishedWithChangesSharp';
+import { jwtDecode } from "jwt-decode";
+import { useNavigate } from "react-router-dom"; 
 
 
 
@@ -71,6 +73,7 @@ const PostList: React.FC = () => {
   const [reactionEmoji, setReactionEmoji] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const navigate = useNavigate();
   const postsPerPage = 10;
 
   const fetchComments = async (postId: string) => {
@@ -83,7 +86,6 @@ const PostList: React.FC = () => {
     }
   };
 
-  // Função que busca posts e comentários
   const fetchPostsWithComments = useCallback(async (page: number) => {
     setLoadingPosts(true);
     console.log(`Fetching posts for page: ${page}`); // Verificar qual página está sendo solicitada
@@ -97,9 +99,6 @@ const PostList: React.FC = () => {
         },
       });
   
-      // Log detalhado da resposta da API
-      console.log("Resposta da API:", response.data);
-  
       // Verificar se a estrutura de resposta contém 'posts' diretamente ou dentro de um objeto
       const postsArray = Array.isArray(response.data.posts)
         ? response.data.posts
@@ -111,28 +110,49 @@ const PostList: React.FC = () => {
         return;
       }
   
-      // Buscar comentários para cada post em ordem decrescente (se já não estiver sendo ordenado no backend)
-      const postsData = await Promise.all(
+      // Atualiza os posts preservando comentários de posts já existentes no estado
+      setPosts((prevPosts) => {
+        // Verifica e mantém os comentários já carregados
+        const updatedPosts = postsArray.map((post: any) => {
+          const existingPost = prevPosts.find((p) => p.id === post.id);
+          if (existingPost) {
+            // Mantém os comentários já carregados
+            return { ...post, comments: existingPost.comments || [] };
+          } else {
+            // Retorna o post sem comentários, comentários serão buscados depois
+            return { ...post, comments: [] };
+          }
+        });
+        return updatedPosts;
+      });
+  
+      // Agora, buscar comentários para posts que ainda não têm comentários carregados
+      await Promise.all(
         postsArray.map(async (post: any) => {
-          try {
-            const commentsResponse = await axios.get(`${baseURL}/posts/${post.id}/comments`);
-            const comments = commentsResponse.data;
+          const existingPost = postsArray.find((p: any) => p.id === post.id);
+          if (!existingPost.comments || existingPost.comments.length === 0) {
+            try {
+              const commentsResponse = await axios.get(
+                `${baseURL}/posts/${post.id}/comments`
+              );
+              const comments = commentsResponse.data;
   
-            // Atualiza o estado de imagem em carregamento
-            setImageLoading((prev) => ({ ...prev, [post.id]: true })); 
-  
-            // Retorna o post com seus comentários já ordenados
-            return { ...post, comments: comments.reverse() }; // Se a API não ordenar, fazemos isso aqui
-          } catch (error) {
-            console.error(`Erro ao buscar comentários para o post ${post.id}`, error);
-            return { ...post, comments: [] }; // Retorna o post sem comentários em caso de erro
+              // Atualiza o post com os comentários obtidos
+              setPosts((prevPosts) =>
+                prevPosts.map((p) =>
+                  p.id === post.id ? { ...p, comments } : p
+                )
+              );
+            } catch (error) {
+              console.error(
+                `Erro ao buscar comentários para o post ${post.id}`,
+                error
+              );
+            }
           }
         })
       );
   
-      // Atualizar o estado com os posts e o total de páginas
-      console.log("Posts obtidos com comentários:", postsData);
-      setPosts(postsData);
       setTotalPages(Math.ceil(response.data.total / postsPerPage)); // Total de páginas com base na resposta da API
     } catch (error) {
       console.error("Erro ao buscar postagens", error);
@@ -140,10 +160,11 @@ const PostList: React.FC = () => {
       setLoadingPosts(false);
       console.log("Carregamento de posts finalizado");
     }
-  }, [postsPerPage]); // Apenas depende de `postsPerPage`
+  }, [postsPerPage]);
   
   
-  // useEffect para ouvir a mudança da página e buscar os posts
+  
+  // useEffect para buscar os posts ao carregar a página
   useEffect(() => {
     fetchPostsWithComments(currentPage);
   
@@ -172,6 +193,8 @@ const PostList: React.FC = () => {
       socket.off("post-reaction-updated");
     };
   }, [currentPage, fetchPostsWithComments]);
+  
+  
 
 
 // Função para abrir o Snackbar com emoji
@@ -196,9 +219,29 @@ const handleReaction = useCallback(
     const start = performance.now();
 
     if (!selectedReactionPost) return;
+
     const token = localStorage.getItem("token");
 
+    // Verifica se o token está presente e é válido
+    if (!token) {
+      handleOpenSnackbar("Token não encontrado, faça login novamente.", "❌");
+      navigate("/login"); // Redireciona para a página de login
+      return;
+    }
+
     try {
+      // Decodifica o token para verificar sua validade
+      const decodedToken: any = jwtDecode(token);
+      const currentTime = Date.now() / 1000;
+
+      // Se o token estiver expirado, redireciona para login
+      if (decodedToken.exp < currentTime) {
+        handleOpenSnackbar("Sessão expirada, faça login novamente.", "❌");
+        localStorage.removeItem("token"); // Remove o token expirado
+        navigate("/login"); // Redireciona para a página de login
+        return;
+      }
+
       const response = await axios.post(
         `${baseURL}/posts/${selectedReactionPost.id}/reaction`,
         { type: reactionType },
@@ -214,20 +257,26 @@ const handleReaction = useCallback(
       );
 
       // Define o emoji correspondente à reação
-      const reactionEmoji = reactionType === "like" ? "👍" :
-                            reactionType === "love" ? "❤️" :
-                            reactionType === "haha" ? "😂" : "";
+      const reactionEmoji =
+        reactionType === "like"
+          ? "👍"
+          : reactionType === "love"
+          ? "❤️"
+          : reactionType === "haha"
+          ? "😂"
+          : "";
 
       handleOpenSnackbar(`Reagiu com ${reactionType}!`, reactionEmoji); // Exibe a mensagem com o emoji
       handleCloseReactionMenu();
     } catch (error) {
       handleOpenSnackbar("Erro ao adicionar reação.", "❌");
+      console.error("Erro ao adicionar reação:", error);
     }
 
     const end = performance.now();
     console.log(`handleReaction levou ${end - start} ms`);
   },
-  [selectedReactionPost]
+  [selectedReactionPost, navigate]
 );
 
   const handleCloseReactionMenu = () => {
@@ -390,7 +439,8 @@ const handleReaction = useCallback(
     setOpenImageDialog(imagePath);
   };
 
-  useNewPostChecker(setPosts, handleOpenSnackbar);
+  useNewPostChecker(fetchPostsWithComments, handleOpenSnackbar, currentPage);
+
 
   return (
     <Box padding={2}>

@@ -12,6 +12,9 @@ const CommentList: React.FC<CommentListProps> = ({
   selectedPost,
   handleClose,
 }) => {
+  // Verifique se selectedPost existe e se comments não está indefinido ou nulo
+  const comments = selectedPost?.comments || [];
+
   return (
     <Popover
       open={Boolean(anchorEl)}
@@ -22,10 +25,10 @@ const CommentList: React.FC<CommentListProps> = ({
         horizontal: "left",
       }}
     >
-      <Box sx={{ padding: 2 }}>
+      <Box mt={2} sx={{ padding: 2 }}>
         <Typography variant="h6">Comentários</Typography>
-        {selectedPost?.comments?.length > 0 ? (
-          selectedPost.comments.map((comment: any, index: any) => (
+        {comments.length > 0 ? (
+          comments.slice(0).reverse().map((comment: any, index: number) => (
             <Typography key={index}>
               {comment.user
                 ? `${comment.user.usuario}: ${comment.content}`

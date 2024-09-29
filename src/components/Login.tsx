@@ -9,7 +9,8 @@ import {
   Alert,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { register, subscribeUserToPush } from "../serviceWorkerRegistration";
+import { jwtDecode } from "jwt-decode"; // Corrigido: jwt_decode deve ser importado corretamente
+import { subscribeUserToPush } from "../serviceWorkerRegistration"; // Certifique-se de importar corretamente
 
 // Exemplo de logo simples para simular o estilo do Trello
 const Logo = () => (
@@ -35,17 +36,40 @@ const Login: React.FC = () => {
   // Verifica se o usuário está autenticado
   useEffect(() => {
     const token = localStorage.getItem("token");
+    console.log("Verificando se o token está armazenado:", token);
     if (token) {
+      try {
+        const decodedToken = jwtDecode<any>(token); // Decodifica corretamente o token
+  
+        if (decodedToken) {
+          // Calcula a data de expiração para 100 anos a partir de agora
+          const expirationDate = new Date();
+          expirationDate.setFullYear(expirationDate.getFullYear() + 100);
+          console.log(
+            "Data de expiração definida para daqui a 100 anos:",
+            expirationDate
+          );
+  
+          // Se precisar de mais informações do token, use-as aqui
+          console.log("Dados do token decodificado:", decodedToken);
+        }
+      } catch (error) {
+        console.error("Erro ao decodificar o token:", error);
+      }
       navigate("/main"); // Redireciona para o componente principal
     }
   }, [navigate]);
+  
 
   // Lógica para bloquear o botão de voltar
   useEffect(() => {
     const handleBackButton = (event: PopStateEvent) => {
       const token = localStorage.getItem("token");
+      console.log("Evento de voltar detectado. Token presente:", token);
+
       if (token) {
         event.preventDefault();
+        console.log("Bloqueando botão de voltar, redirecionando para main");
         navigate("/main"); // Se o usuário estiver autenticado, redireciona de volta ao componente principal
       }
     };
@@ -54,11 +78,13 @@ const Login: React.FC = () => {
 
     return () => {
       window.removeEventListener("popstate", handleBackButton);
+      console.log("Removendo o listener do botão de voltar");
     };
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Tentativa de login iniciada...");
     setLoading(true); // Ativa o spinner
     setError(null); // Limpa o erro antes do envio
 
@@ -74,37 +100,56 @@ const Login: React.FC = () => {
         }
       );
 
+      console.log("Resposta do servidor recebida:", response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log("Login bem-sucedido. Dados recebidos:", data);
+        
         // Armazena o token, tipo de usuário e ID do usuário
         localStorage.setItem("token", data.token);
         localStorage.setItem("tipoUsuario", data.tipoUsuario);
         localStorage.setItem("userId", data.userId || data._id); // Armazena o ID do usuário
+        console.log("Token, tipo de usuário e userId armazenados no localStorage.");
+
+        // Decodifica o token e exibe a data de expiração
+        try {
+          const decodedToken = jwtDecode<any>(data.token);
+          const expirationDate = new Date(decodedToken.exp * 1000);
+          console.log("Data de expiração do token:", expirationDate);
+        } catch (error) {
+          console.error("Erro ao decodificar o token:", error);
+        }
 
         // Solicita permissão para notificações
         askNotificationPermission();
 
         // Após login bem-sucedido, registra e inscreve o usuário para notificações push
         const registration = await navigator.serviceWorker.ready;
+        console.log("ServiceWorker pronto, inscrevendo o usuário para notificações push.");
         subscribeUserToPush(registration);
 
         // Redireciona para a página principal
         navigate("/main");
       } else {
         const errorMsg = await response.json(); // Pega a mensagem de erro do servidor
+        console.error("Erro na resposta do login:", errorMsg);
         setError(errorMsg.msg || "Credenciais inválidas."); // Mensagem padrão caso o erro não tenha msg
         setOpenSnackbar(true); // Abre a Snackbar quando houver erro
       }
     } catch (err) {
+      console.error("Erro no processo de login:", err);
       setError("Ocorreu um erro. Tente novamente.");
       setOpenSnackbar(true); // Abre a Snackbar para erro de rede ou outro
     } finally {
       setLoading(false); // Desativa o spinner
+      console.log("Finalizando a tentativa de login.");
     }
   };
 
   // Solicita permissão para notificações após o login
   const askNotificationPermission = () => {
+    console.log("Verificando permissão para notificações...");
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission().then((permission) => {
         if (permission === "granted") {
@@ -113,6 +158,8 @@ const Login: React.FC = () => {
           console.log("Notificações negadas");
         }
       });
+    } else {
+      console.log("Permissões já concedidas ou notificações não suportadas.");
     }
   };
 
