@@ -20,6 +20,14 @@ const PostForm: React.FC<PostFormProps> = ({ closeModal }) => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Função para truncar o nome do arquivo se for muito longo
+  const truncateFileName = (name: string, maxLength: number) => {
+    if (name.length > maxLength) {
+      return name.substring(0, maxLength - 3) + "...";
+    }
+    return name;
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setImage(e.target.files[0]);
@@ -113,7 +121,7 @@ const PostForm: React.FC<PostFormProps> = ({ closeModal }) => {
         <Box
           marginBottom={2}
           display="flex"
-          justifyContent="space-between" // Isso garante que os ícones fiquem nas extremidades opostas
+          justifyContent="space-between"
           alignItems="center"
         >
           {/* Botão de upload com ícone de nuvem e texto "Anexo" */}
@@ -130,7 +138,7 @@ const PostForm: React.FC<PostFormProps> = ({ closeModal }) => {
               component="span"
               startIcon={<CloudUpload />}
             >
-              {image ? image.name : "Anexo"}
+              {image ? truncateFileName(image.name, 20) : "Anexo"}
             </Button>
           </label>
 

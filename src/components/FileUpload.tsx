@@ -19,6 +19,14 @@ const FileUploadComponent: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [openSnackbar, setOpenSnackbar] = useState(false);
 
+  // Função para truncar o nome do arquivo se ele for muito longo
+  const truncateFileName = (name: string, maxLength: number) => {
+    if (name.length > maxLength) {
+      return name.substring(0, maxLength - 3) + "...";
+    }
+    return name;
+  };
+
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
@@ -94,7 +102,7 @@ const FileUploadComponent: React.FC = () => {
               justifyContent: "flex-start", // Alinha o texto à esquerda
             }}
           >
-            {file ? file.name : "Selecionar Arquivo"}
+            {file ? truncateFileName(file.name, 20) : "Selecionar Arquivo"}
           </Button>
         </label>
 
