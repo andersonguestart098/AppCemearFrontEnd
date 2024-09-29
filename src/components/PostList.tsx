@@ -38,7 +38,7 @@ import useNewPostChecker from "../useNewPostChecker";
 import PublishedWithChangesSharpIcon from '@mui/icons-material/PublishedWithChangesSharp';
 import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom"; 
-
+import { useUserContext } from './UserContext';
 
 
 const baseURL = "https://cemear-b549eb196d7c.herokuapp.com";
@@ -73,6 +73,7 @@ const PostList: React.FC = () => {
   const [reactionEmoji, setReactionEmoji] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const { tipoUsuario, setTipoUsuario } = useUserContext();
   const navigate = useNavigate();
   const postsPerPage = 10;
 
@@ -172,7 +173,7 @@ const PostList: React.FC = () => {
     socket.on("new-post", (newPost) => {
       console.log("Novo post recebido via socket:", newPost);
       setPosts((prevPosts) => [newPost, ...prevPosts]);
-      handleOpenSnackbar("Novo post adicionado!", "🆕"); // Substitui o toast
+      handleOpenSnackbar("Novo post adicionado!", "🆕");
     });
   
     // Socket para atualizações de reações
@@ -188,11 +189,20 @@ const PostList: React.FC = () => {
       });
     });
   
+    // Socket para deleção de posts
+    socket.on("delete-post", () => {
+      console.log("Post deletado via socket");
+      fetchPostsWithComments(currentPage); // Atualiza os posts após a deleção
+      handleOpenSnackbar("Post deletado!", "🗑️");
+    });
+  
     return () => {
       socket.off("new-post");
       socket.off("post-reaction-updated");
+      socket.off("delete-post");
     };
   }, [currentPage, fetchPostsWithComments]);
+  
   
   
 
@@ -335,10 +345,7 @@ const handleReaction = useCallback(
   
   
 
-  const handleClick = (
-    event: React.MouseEvent<HTMLButtonElement>,
-    postId: string
-  ) => {
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>, postId: string) => {
     setAnchorEl(event.currentTarget);
     setSelectedPost(postId);
   };
@@ -347,7 +354,6 @@ const handleReaction = useCallback(
     setAnchorEl(null);
     setSelectedPost(null);
   };
-
   const handleEdit = (postId: string, titulo: string, conteudo: string) => {
     setEditingPostId(postId);
     setEditedTitulo(titulo);
@@ -357,13 +363,13 @@ const handleReaction = useCallback(
 
   const handleSaveEdit = async (postId: string) => {
     const start = performance.now(); // Início da medição
-
+  
     try {
       await axios.put(`${baseURL}/posts/${postId}`, {
         titulo: editedTitulo,
         conteudo: editedConteudo,
       });
-
+  
       setPosts((prevPosts) =>
         prevPosts.map((post) =>
           post.id === postId
@@ -372,36 +378,49 @@ const handleReaction = useCallback(
         )
       );
       setEditingPostId(null);
-      toast.success("Post editado com sucesso!");
+  
+      // Substitui o toast por um snackbar
+      handleOpenSnackbar("Post editado com sucesso!", "✏️");
     } catch (error) {
-      toast.error("Erro ao editar post");
+      // Substitui o toast por um snackbar
+      handleOpenSnackbar("Erro ao editar post", "❌");
+      console.error("Erro ao editar post:", error);
     }
-
+  
     const end = performance.now(); // Fim da medição
     console.log(`handleSaveEdit levou ${end - start} ms`);
   };
-
+  
   const handleDelete = async () => {
     const start = performance.now(); // Início da medição
-
-    if (selectedPost) {
-      try {
-        await axios.delete(`${baseURL}/posts/${selectedPost}`);
-        setPosts((prevPosts) =>
-          prevPosts.filter((post) => post.id !== selectedPost)
-        );
-        toast.success("Post deletado com sucesso!");
-        handleClose();
-      } catch (error: any) {
-        const errorMessage =
-          error.response?.data?.message || "Erro ao deletar post";
-        toast.error(errorMessage);
-      }
+  
+    if (!selectedPost) {
+      handleOpenSnackbar("Nenhum post selecionado para deletar", "❌");
+      return;
     }
-
+  
+    try {
+      await axios.delete(`${baseURL}/posts/${selectedPost}`);
+      setPosts((prevPosts) =>
+        prevPosts.filter((post) => post.id !== selectedPost)
+      );
+  
+      // Substitui o toast por um snackbar
+      handleOpenSnackbar("Post deletado com sucesso!", "🗑️");
+      handleClose();
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || "Erro ao deletar post";
+  
+      // Substitui o toast por um snackbar
+      handleOpenSnackbar(errorMessage, "❌");
+    }
+  
     const end = performance.now(); // Fim da medição
     console.log(`handleDelete levou ${end - start} ms`);
   };
+  
+  
 
   const handleImageLoad = (postId: string) => {
     setImageLoading((prev) => ({ ...prev, [postId]: false }));
@@ -441,6 +460,8 @@ const handleReaction = useCallback(
 
   useNewPostChecker(fetchPostsWithComments, handleOpenSnackbar, currentPage);
 
+  
+
 
   return (
     <Box padding={2}>
@@ -461,50 +482,54 @@ const handleReaction = useCallback(
       </Typography>
       
       <Snackbar
-          open={openSnackbar}
-          autoHideDuration={3000} // O Snackbar fecha automaticamente após 3 segundos
-          onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: "top", horizontal: "center" }} // Alinha no topo
-          message={
-            <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ width: '100%' }}>
-              {/* Verifica se é uma reação ou uma mensagem geral */}
-              {reactionEmoji ? (
-                <span>{reactionEmoji} {snackbarMessage}</span> // Exibe o emoji para reações
-              ) : (
-                <Box display="flex" alignItems="center">
-                  {snackbarMessage === "Atualizando Post's..." ? (
-                    <PublishedWithChangesSharpIcon sx={{ marginRight: "10px", color: "#FF9800" }} /> // Ícone para atualizações de posts
-                  ) : (
-                    <MarkChatReadSharpIcon sx={{ marginRight: "10px", color: "#4caf50" }} /> // Ícone para comentários ou outras mensagens
-                  )}
-                  <span>{snackbarMessage}</span>
-                </Box>
-              )}
-              <LinearProgress
-                variant="determinate"
-                value={100} // Valor inicial 100%
-                sx={{
-                  flexGrow: 1,
-                  height: "5px",
-                  backgroundColor: "#e0e0e0", // Cor do fundo da barra
-                  marginLeft: "10px", // Espaço entre texto e barra
-                  "& .MuiLinearProgress-bar": {
-                    backgroundColor: "#1976d2", // Cor da barra que diminui
-                    animationDuration: "3s", // Define a animação para 3 segundos
-                    animationTimingFunction: "linear",
-                  }
-                }}
-              />
-            </Box>
-          }
-          sx={{
-            backgroundColor: "#fff", // Cor branca para o fundo do Snackbar
-            color: "#333", // Texto em cinza escuro
-            borderRadius: "8px",
-            boxShadow: "0px 3px 5px rgba(0, 0, 0, 0.2)", // Sombra leve
-            padding: "10px 20px", // Espaçamento interno
-          }}
-        />
+        open={openSnackbar}
+        autoHideDuration={3000} // O Snackbar fecha automaticamente após 3 segundos
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }} // Alinha no topo
+        message={
+          <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ width: '100%' }}>
+            {/* Verifica se é uma reação ou uma mensagem geral */}
+            {reactionEmoji ? (
+              <span>{reactionEmoji} {snackbarMessage}</span> // Exibe o emoji para reações
+            ) : (
+              <Box display="flex" alignItems="center">
+                {snackbarMessage === "Atualizando Post's..." ? (
+                  <PublishedWithChangesSharpIcon sx={{ marginRight: "10px", color: "#FF9800" }} /> // Ícone para atualizações de posts
+                ) : snackbarMessage.includes("editado") ? (
+                  <EditIcon sx={{ marginRight: "10px", color: "#4caf50" }} /> // Ícone para edição de posts
+                ) : snackbarMessage.includes("deletado") ? (
+                  <DeleteIcon sx={{ marginRight: "10px", color: "#f44336" }} /> // Ícone para exclusão de posts
+                ) : (
+                  <MarkChatReadSharpIcon sx={{ marginRight: "10px", color: "#4caf50" }} /> // Ícone para comentários ou outras mensagens
+                )}
+                <span>{snackbarMessage}</span>
+              </Box>
+            )}
+            <LinearProgress
+              variant="determinate"
+              value={100} // Valor inicial 100%
+              sx={{
+                flexGrow: 1,
+                height: "5px",
+                backgroundColor: "#e0e0e0", // Cor do fundo da barra
+                marginLeft: "10px", // Espaço entre texto e barra
+                "& .MuiLinearProgress-bar": {
+                  backgroundColor: "#1976d2", // Cor da barra que diminui
+                  animationDuration: "3s", // Define a animação para 3 segundos
+                  animationTimingFunction: "linear",
+                }
+              }}
+            />
+          </Box>
+        }
+        sx={{
+          backgroundColor: "#fff", // Cor branca para o fundo do Snackbar
+          color: "#333", // Texto em cinza escuro
+          borderRadius: "8px",
+          boxShadow: "0px 3px 5px rgba(0, 0, 0, 0.2)", // Sombra leve
+          padding: "10px 20px", // Espaçamento interno
+        }}
+      />
 
 
       {loadingPosts ? (
@@ -530,30 +555,33 @@ const handleReaction = useCallback(
                   }}
                 >
                   <IconButton
-                    onClick={(event) => handleClick(event, post.id)}
-                    sx={{ position: "absolute", top: "16px", right: "16px" }}
-                  >
-                    <MoreVertIcon />
-                  </IconButton>
+  onClick={(event) => handleClick(event, post.id)}
+  sx={{ position: "absolute", top: "16px", right: "16px" }}
+>
+  {tipoUsuario === "admin" && <MoreVertIcon />}
+</IconButton>
 
-                  <Menu
-                    anchorEl={anchorEl}
-                    open={Boolean(anchorEl) && selectedPost === post.id}
-                    onClose={handleClose}
-                  >
-                    <MenuItem
-                      onClick={() =>
-                        handleEdit(post.id, post.titulo, post.conteudo)
-                      }
-                    >
-                      <EditIcon sx={{ marginRight: "8px" }} />
-                      Editar
-                    </MenuItem>
-                    <MenuItem onClick={handleDelete}>
-                      <DeleteIcon sx={{ marginRight: "8px" }} />
-                      Excluir
-                    </MenuItem>
-                  </Menu>
+{tipoUsuario === 'admin' && (  // Verificação se tipoUsuario é 'admin'
+                <IconButton
+                  onClick={(event) => handleClick(event, post.id)}
+                  sx={{ position: "absolute", top: "16px", right: "16px" }}
+                >
+                  <MoreVertIcon />
+                </IconButton>
+              )}
+
+              <Menu anchorEl={anchorEl} open={Boolean(anchorEl) && selectedPost === post.id} onClose={handleClose}>
+                {tipoUsuario === 'admin' && [
+                  <MenuItem key="edit" onClick={() => handleEdit(post.id, post.titulo, post.conteudo)}>
+                    <EditIcon sx={{ marginRight: "8px" }} />
+                    Editar
+                  </MenuItem>,
+                  <MenuItem key="delete" onClick={handleDelete}>
+                    <DeleteIcon sx={{ marginRight: "8px" }} />
+                    Excluir
+                  </MenuItem>
+                ]}
+              </Menu>
 
                   <Typography
                     variant="h5"
