@@ -398,7 +398,6 @@ const handleReaction = useCallback(
       handleOpenSnackbar("Nenhum post selecionado para deletar", "❌");
       return;
     }
-  
     try {
       await axios.delete(`${baseURL}/posts/${selectedPost}`);
       setPosts((prevPosts) =>
@@ -493,7 +492,7 @@ const handleReaction = useCallback(
               <span>{reactionEmoji} {snackbarMessage}</span> // Exibe o emoji para reações
             ) : (
               <Box display="flex" alignItems="center">
-                {snackbarMessage === "Atualizando Post's..." ? (
+                {snackbarMessage === "Post's Atualizados!" ? (
                   <PublishedWithChangesSharpIcon sx={{ marginRight: "10px", color: "#4caf50" }} /> // Ícone para atualizações de posts
                 ) : snackbarMessage.includes("editado") ? (
                   <EditIcon sx={{ marginRight: "10px", color: "#4caf50" }} /> // Ícone para edição de posts

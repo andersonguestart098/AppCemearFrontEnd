@@ -9,7 +9,7 @@ const useNewPostChecker = (
     try {
       // Chama diretamente a função que busca posts
       await fetchPostsWithComments(currentPage);
-      openSnackbar("Atualizando Post's...");
+      openSnackbar("Post's Atualizados!");
     } catch (error) {
       console.error("Erro ao buscar novos posts:", error);
     }
