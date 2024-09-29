@@ -146,7 +146,7 @@ const PostList: React.FC = () => {
               );
             } catch (error) {
               console.error(
-                `Erro ao buscar comentários para o post ${post.id}`,
+                `Erro ao buscar comentários para o Post ${post.id}`,
                 error
               );
             }
