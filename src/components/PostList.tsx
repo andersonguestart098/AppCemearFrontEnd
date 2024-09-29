@@ -172,7 +172,7 @@ const PostList: React.FC = () => {
     socket.on("new-post", (newPost) => {
       console.log("Novo post recebido via socket:", newPost);
       setPosts((prevPosts) => [newPost, ...prevPosts]);
-      toast.info("Novo post adicionado!");
+      handleOpenSnackbar("Novo post adicionado!", "🆕"); // Substitui o toast
     });
   
     // Socket para atualizações de reações
@@ -460,52 +460,51 @@ const handleReaction = useCallback(
         Postagens
       </Typography>
       
-<Snackbar
-  open={openSnackbar}
-  autoHideDuration={3000} // O Snackbar fecha automaticamente após 3 segundos
-  onClose={handleCloseSnackbar}
-  anchorOrigin={{ vertical: 'top', horizontal: 'center' }} // Alinha no topo
-  message={
-    <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ width: '100%' }}>
-      {/* Verifica se é um comentário ou uma atualização de post e mostra o ícone correto */}
-      {reactionEmoji ? (
-        <span>{reactionEmoji} {snackbarMessage}</span> // Exibe o emoji para reações
-      ) : (
-        <Box display="flex" alignItems="center">
-          {snackbarMessage === "Atualizando Post's..." ? (
-            <PublishedWithChangesSharpIcon sx={{ marginRight: "10px", color: "#FF9800" }} /> // Ícone para atualizações de posts
-          ) : (
-            <MarkChatReadSharpIcon sx={{ marginRight: "10px", color: "#4caf50" }} /> // Ícone para comentários ou outras mensagens
-          )}
-          <span>{snackbarMessage}</span>
-        </Box>
-      )}
-      <LinearProgress
-        variant="determinate"
-        value={100} // Valor inicial 100%
-        sx={{
-          flexGrow: 1,
-          height: "5px",
-          backgroundColor: "#e0e0e0", // Cor do fundo da barra
-          marginLeft: "10px", // Espaço entre texto e barra
-          "& .MuiLinearProgress-bar": {
-            backgroundColor: "#1976d2", // Cor da barra que diminui
-            animationDuration: "3s", // Define a animação para 3 segundos
-            animationTimingFunction: "linear",
+      <Snackbar
+          open={openSnackbar}
+          autoHideDuration={3000} // O Snackbar fecha automaticamente após 3 segundos
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: "top", horizontal: "center" }} // Alinha no topo
+          message={
+            <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ width: '100%' }}>
+              {/* Verifica se é uma reação ou uma mensagem geral */}
+              {reactionEmoji ? (
+                <span>{reactionEmoji} {snackbarMessage}</span> // Exibe o emoji para reações
+              ) : (
+                <Box display="flex" alignItems="center">
+                  {snackbarMessage === "Atualizando Post's..." ? (
+                    <PublishedWithChangesSharpIcon sx={{ marginRight: "10px", color: "#FF9800" }} /> // Ícone para atualizações de posts
+                  ) : (
+                    <MarkChatReadSharpIcon sx={{ marginRight: "10px", color: "#4caf50" }} /> // Ícone para comentários ou outras mensagens
+                  )}
+                  <span>{snackbarMessage}</span>
+                </Box>
+              )}
+              <LinearProgress
+                variant="determinate"
+                value={100} // Valor inicial 100%
+                sx={{
+                  flexGrow: 1,
+                  height: "5px",
+                  backgroundColor: "#e0e0e0", // Cor do fundo da barra
+                  marginLeft: "10px", // Espaço entre texto e barra
+                  "& .MuiLinearProgress-bar": {
+                    backgroundColor: "#1976d2", // Cor da barra que diminui
+                    animationDuration: "3s", // Define a animação para 3 segundos
+                    animationTimingFunction: "linear",
+                  }
+                }}
+              />
+            </Box>
           }
-        }}
-      />
-    </Box>
-  }
-  sx={{
-    backgroundColor: "#fff", // Cor branca para o fundo do Snackbar
-    color: "#333", // Texto em cinza escuro
-    borderRadius: "8px",
-    boxShadow: "0px 3px 5px rgba(0, 0, 0, 0.2)", // Sombra leve
-    padding: "10px 20px", // Espaçamento interno
-  }}
-/>
-
+          sx={{
+            backgroundColor: "#fff", // Cor branca para o fundo do Snackbar
+            color: "#333", // Texto em cinza escuro
+            borderRadius: "8px",
+            boxShadow: "0px 3px 5px rgba(0, 0, 0, 0.2)", // Sombra leve
+            padding: "10px 20px", // Espaçamento interno
+          }}
+        />
 
 
       {loadingPosts ? (
