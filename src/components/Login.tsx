@@ -62,28 +62,25 @@ const Login: React.FC = () => {
 
   // Lógica para bloquear o botão de voltar
   useEffect(() => {
-    const handleBackButton = (event: PopStateEvent) => {
-      const token = localStorage.getItem("token");
-      console.log("Evento de voltar detectado. Token presente:", token);
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decodedToken = jwtDecode<any>(token); // Decodifica o token
 
-      if (token) {
-        event.preventDefault();
-        console.log("Bloqueando botão de voltar, redirecionando para main");
-        navigate("/main"); // Se o usuário estiver autenticado, redireciona de volta ao componente principal
+        if (decodedToken) {
+          navigate("/main"); // Redireciona para o componente principal se o token for válido
+          return; // Sai do useEffect, evitando o login
+        }
+      } catch (error) {
+        console.error("Erro ao decodificar o token:", error);
+        // Se houver erro, o token pode estar inválido. Você pode removê-lo do localStorage
+        localStorage.removeItem("token");
       }
-    };
-
-    window.addEventListener("popstate", handleBackButton);
-
-    return () => {
-      window.removeEventListener("popstate", handleBackButton);
-      console.log("Removendo o listener do botão de voltar");
-    };
+    }
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Tentativa de login iniciada...");
     setLoading(true); // Ativa o spinner
     setError(null); // Limpa o erro antes do envio
 
@@ -99,70 +96,42 @@ const Login: React.FC = () => {
         }
       );
 
-      console.log("Resposta do servidor recebida:", response.status);
-
       if (response.ok) {
         const data = await response.json();
-        console.log("Login bem-sucedido. Dados recebidos:", data);
 
         // Armazena o token, tipo de usuário e ID do usuário
         localStorage.setItem("token", data.token);
         localStorage.setItem("tipoUsuario", data.tipoUsuario);
         localStorage.setItem("userId", data.userId || data._id); // Armazena o ID do usuário
-        console.log(
-          "Token, tipo de usuário e userId armazenados no localStorage."
-        );
 
-        // Decodifica o token e exibe a data de expiração
-        try {
-          const decodedToken = jwtDecode<any>(data.token);
-          const expirationDate = new Date(decodedToken.exp * 1000);
-          console.log("Data de expiração do token:", expirationDate);
-        } catch (error) {
-          console.error("Erro ao decodificar o token:", error);
-        }
-
-        // Solicita permissão para notificações
+        // Solicita permissão para notificações e salva a assinatura
         askNotificationPermission();
-
-        // Após login bem-sucedido, registra e inscreve o usuário para notificações push
-        const registration = await navigator.serviceWorker.ready;
-        console.log(
-          "ServiceWorker pronto, inscrevendo o usuário para notificações push."
-        );
-        subscribeUserToPush(registration);
 
         // Redireciona para a página principal
         navigate("/main");
       } else {
         const errorMsg = await response.json(); // Pega a mensagem de erro do servidor
-        console.error("Erro na resposta do login:", errorMsg);
-        setError(errorMsg.msg || "Credenciais inválidas."); // Mensagem padrão caso o erro não tenha msg
+        setError(errorMsg.msg || "Credenciais inválidas.");
         setOpenSnackbar(true); // Abre a Snackbar quando houver erro
       }
     } catch (err) {
-      console.error("Erro no processo de login:", err);
       setError("Ocorreu um erro. Tente novamente.");
       setOpenSnackbar(true); // Abre a Snackbar para erro de rede ou outro
     } finally {
       setLoading(false); // Desativa o spinner
-      console.log("Finalizando a tentativa de login.");
     }
   };
 
-  // Solicita permissão para notificações após o login
+  // Função para solicitar permissão para notificações e inscrever o usuário
   const askNotificationPermission = () => {
-    console.log("Verificando permissão para notificações...");
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission().then((permission) => {
         if (permission === "granted") {
-          console.log("Notificações permitidas");
-        } else {
-          console.log("Notificações negadas");
+          navigator.serviceWorker.ready.then((registration) => {
+            subscribeUserToPush(registration); // Inscreve para notificações push
+          });
         }
       });
-    } else {
-      console.log("Permissões já concedidas ou notificações não suportadas.");
     }
   };
 
