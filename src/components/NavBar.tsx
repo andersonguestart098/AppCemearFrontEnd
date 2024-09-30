@@ -3,24 +3,20 @@ import { useNavigate } from "react-router-dom";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import IconButton from "@mui/material/IconButton";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SettingsIcon from "@mui/icons-material/Settings"; // Ícone de configuração
+import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded"; // Ícone de notificações (sininho)
 import CircularProgress from "@mui/material/CircularProgress";
 import Popover from "@mui/material/Popover";
-import Switch from "@mui/material/Switch";
-import Button from "@mui/material/Button";
+import Typography from "@mui/material/Typography";
 
 const logoSrc = "/logo.png";
 
 function ResponsiveAppBar() {
   const navigate = useNavigate();
   const [loading, setLoading] = React.useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = React.useState(
-    Notification.permission === "granted"
-  ); // Verificar se as notificações já foram permitidas
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 
   const handleLogout = () => {
@@ -40,20 +36,17 @@ function ResponsiveAppBar() {
     setAnchorEl(null);
   };
 
-  const askNotificationPermission = () => {
-    console.log("Verificando permissão para notificações...");
-    if ("Notification" in window && Notification.permission !== "granted") {
-      Notification.requestPermission().then((permission) => {
-        if (permission === "granted") {
-          console.log("Notificações permitidas");
-          setNotificationsEnabled(true); // Atualiza para permitir notificações
-        } else {
-          console.log("Notificações negadas");
-          setNotificationsEnabled(false); // Não permitiu notificações
-        }
-      });
-    } else {
-      console.log("Permissões já concedidas ou notificações não suportadas.");
+  const askNotificationPermission = async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        console.log("Notificações ativadas!");
+        // Aqui você pode chamar qualquer função adicional necessária após a permissão
+      } else {
+        console.log("Permissão de notificações negada.");
+      }
+    } catch (error) {
+      console.error("Erro ao solicitar permissão de notificações:", error);
     }
   };
 
@@ -84,7 +77,7 @@ function ResponsiveAppBar() {
               <img src={logoSrc} alt="Logo" style={{ width: 125 }} />
             </Box>
 
-            {/* Saudação, ícone de configuração e logout alinhados à direita */}
+            {/* Ícones de configuração e logout alinhados à direita */}
             <Box sx={{ display: "flex", alignItems: "center" }}>
               <IconButton
                 onClick={handleSettingsClick}
@@ -117,16 +110,14 @@ function ResponsiveAppBar() {
         }}
       >
         <Box p={2}>
-          <Typography variant="h6">Configurações</Typography>
-          <Box display="flex" alignItems="center" mt={2}>
-            <Typography>Permitir Notificações</Typography>
-            <Switch
-              checked={notificationsEnabled}
-              onChange={askNotificationPermission}
-              color="primary"
-              sx={{ marginLeft: "8px" }}
-            />
-          </Box>
+          <Typography variant="h6">Ativar notificações</Typography>
+          {/* Ícone de sininho para notificações */}
+          <IconButton
+            onClick={askNotificationPermission}
+            sx={{ color: "#0B68A9", marginTop: "8px" }}
+          >
+            <NotificationsActiveRoundedIcon />
+          </IconButton>
         </Box>
       </Popover>
 

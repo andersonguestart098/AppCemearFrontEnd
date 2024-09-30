@@ -40,7 +40,7 @@ const Login: React.FC = () => {
     if (token) {
       try {
         const decodedToken = jwtDecode<any>(token); // Decodifica corretamente o token
-  
+
         if (decodedToken) {
           // Calcula a data de expiração para 100 anos a partir de agora
           const expirationDate = new Date();
@@ -49,7 +49,7 @@ const Login: React.FC = () => {
             "Data de expiração definida para daqui a 100 anos:",
             expirationDate
           );
-  
+
           // Se precisar de mais informações do token, use-as aqui
           console.log("Dados do token decodificado:", decodedToken);
         }
@@ -59,7 +59,6 @@ const Login: React.FC = () => {
       navigate("/main"); // Redireciona para o componente principal
     }
   }, [navigate]);
-  
 
   // Lógica para bloquear o botão de voltar
   useEffect(() => {
@@ -105,12 +104,14 @@ const Login: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         console.log("Login bem-sucedido. Dados recebidos:", data);
-        
+
         // Armazena o token, tipo de usuário e ID do usuário
         localStorage.setItem("token", data.token);
         localStorage.setItem("tipoUsuario", data.tipoUsuario);
         localStorage.setItem("userId", data.userId || data._id); // Armazena o ID do usuário
-        console.log("Token, tipo de usuário e userId armazenados no localStorage.");
+        console.log(
+          "Token, tipo de usuário e userId armazenados no localStorage."
+        );
 
         // Decodifica o token e exibe a data de expiração
         try {
@@ -126,7 +127,9 @@ const Login: React.FC = () => {
 
         // Após login bem-sucedido, registra e inscreve o usuário para notificações push
         const registration = await navigator.serviceWorker.ready;
-        console.log("ServiceWorker pronto, inscrevendo o usuário para notificações push.");
+        console.log(
+          "ServiceWorker pronto, inscrevendo o usuário para notificações push."
+        );
         subscribeUserToPush(registration);
 
         // Redireciona para a página principal
