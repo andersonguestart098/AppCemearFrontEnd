@@ -33,48 +33,23 @@ const Login: React.FC = () => {
   const [openSnackbar, setOpenSnackbar] = useState(false); // Estado para controle da Snackbar
   const navigate = useNavigate();
 
-  // Verifica se o usuário está autenticado
+  // Verifica se o usuário está autenticado e se o token é válido
   useEffect(() => {
     const token = localStorage.getItem("token");
-    console.log("Verificando se o token está armazenado:", token);
     if (token) {
       try {
         const decodedToken = jwtDecode<any>(token); // Decodifica corretamente o token
+        const currentTime = Date.now() / 1000; // Verifica o timestamp atual
 
-        if (decodedToken) {
-          // Calcula a data de expiração para 100 anos a partir de agora
-          const expirationDate = new Date();
-          expirationDate.setFullYear(expirationDate.getFullYear() + 100);
-          console.log(
-            "Data de expiração definida para daqui a 100 anos:",
-            expirationDate
-          );
-
-          // Se precisar de mais informações do token, use-as aqui
-          console.log("Dados do token decodificado:", decodedToken);
+        // Se o token não estiver expirado, redireciona para a página principal
+        if (decodedToken && decodedToken.exp > currentTime) {
+          navigate("/main");
+        } else {
+          localStorage.removeItem("token"); // Remove token expirado
         }
       } catch (error) {
         console.error("Erro ao decodificar o token:", error);
-      }
-      navigate("/main"); // Redireciona para o componente principal
-    }
-  }, [navigate]);
-
-  // Lógica para bloquear o botão de voltar
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const decodedToken = jwtDecode<any>(token); // Decodifica o token
-
-        if (decodedToken) {
-          navigate("/main"); // Redireciona para o componente principal se o token for válido
-          return; // Sai do useEffect, evitando o login
-        }
-      } catch (error) {
-        console.error("Erro ao decodificar o token:", error);
-        // Se houver erro, o token pode estar inválido. Você pode removê-lo do localStorage
-        localStorage.removeItem("token");
+        localStorage.removeItem("token"); // Remove o token inválido
       }
     }
   }, [navigate]);

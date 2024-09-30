@@ -11,6 +11,8 @@ import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsAct
 import CircularProgress from "@mui/material/CircularProgress";
 import Popover from "@mui/material/Popover";
 import Typography from "@mui/material/Typography";
+import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 
 const logoSrc = "/logo.png";
 
@@ -18,6 +20,7 @@ function ResponsiveAppBar() {
   const navigate = useNavigate();
   const [loading, setLoading] = React.useState(false);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
 
   const handleLogout = () => {
     console.log("Logout chamado");
@@ -41,12 +44,80 @@ function ResponsiveAppBar() {
       const permission = await Notification.requestPermission();
       if (permission === "granted") {
         console.log("Notificações ativadas!");
-        // Aqui você pode chamar qualquer função adicional necessária após a permissão
+        await registerPushSubscription(); // Função para registrar a assinatura no backend
       } else {
         console.log("Permissão de notificações negada.");
       }
     } catch (error) {
       console.error("Erro ao solicitar permissão de notificações:", error);
+    }
+  };
+
+  // Função para registrar a assinatura no backend após a permissão
+  const registerPushSubscription = async () => {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey:
+          "BDFt6_CYV5ca61PV7V3_ULiIjsNnikV5wxeU-4fHiFYrAeGlJ6U99C8lWSxz3aPgPe7PClp23wa2rgH25tDhj2Q", // Chave pública VAPID
+      });
+
+      const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("userId");
+
+      if (!token || !userId) {
+        throw new Error("Usuário não autenticado.");
+      }
+
+      // Decodificar o token JWT para verificar se está válido
+      const decodedToken = jwtDecode<any>(token);
+      if (!decodedToken || Date.now() / 1000 > decodedToken.exp) {
+        console.error("Token JWT expirado ou inválido.");
+        localStorage.removeItem("token");
+        navigate("/login");
+        return;
+      }
+
+      const p256dhKey = subscription.getKey("p256dh");
+      const authKey = subscription.getKey("auth");
+
+      if (!p256dhKey || !authKey) {
+        throw new Error("Chaves de criptografia ausentes.");
+      }
+
+      // Usar Array.from() para converter Uint8Array em um array normal antes de convertê-lo para base64
+      const p256dhBase64 = btoa(
+        String.fromCharCode(...Array.from(new Uint8Array(p256dhKey)))
+      );
+      const authBase64 = btoa(
+        String.fromCharCode(...Array.from(new Uint8Array(authKey)))
+      );
+
+      // Enviar a assinatura para o backend
+      await axios.post(
+        "https://cemear-b549eb196d7c.herokuapp.com/subscribe",
+        {
+          userId,
+          subscription: {
+            endpoint: subscription.endpoint,
+            keys: {
+              p256dh: p256dhBase64,
+              auth: authBase64,
+            },
+          },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setNotificationsEnabled(true);
+      console.log("Assinatura de notificações salva com sucesso!");
+    } catch (error) {
+      console.error("Erro ao registrar assinatura de notificações:", error);
     }
   };
 
