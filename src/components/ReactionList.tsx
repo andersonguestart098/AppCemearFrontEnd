@@ -28,7 +28,8 @@ const ReactionList: React.FC<ReactionListProps> = ({
           <Typography key={index}>
             {reaction.user
               ? `${reaction.user.usuario} reagiu com ${reaction.type}`
-              : "Usuário desconhecido"}
+              : "Usuário desconhecido"}{" "}
+            {/* Verifica se user é null */}
           </Typography>
         ))
       ) : (
