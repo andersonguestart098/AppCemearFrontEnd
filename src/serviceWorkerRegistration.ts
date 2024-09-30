@@ -39,77 +39,107 @@ export function register() {
   }
 }
 
+async function checkSubscriptionExists(endpoint: string): Promise<boolean> {
+  const userId = getUserIdFromLocalStorage();
+
+  if (!userId) {
+    console.error("User ID não encontrado no localStorage.");
+    return false;
+  }
+
+  try {
+    const response = await fetch(
+      `https://cemear-b549eb196d7c.herokuapp.com/checkSubscription?userId=${userId}&endpoint=${encodeURIComponent(
+        endpoint
+      )}`
+    );
+    const data = await response.json();
+    return data.exists;
+  } catch (error) {
+    console.error("Erro ao verificar assinatura existente:", error);
+    return false;
+  }
+}
+
 // Função para realizar a inscrição do usuário para notificações push
-export function subscribeUserToPush(registration: ServiceWorkerRegistration) {
+export async function subscribeUserToPush(
+  registration: ServiceWorkerRegistration
+) {
   const vapidPublicKey =
     "BDFt6_CYV5ca61PV7V3_ULiIjsNnikV5wxeU-4fHiFYrAeGlJ6U99C8lWSxz3aPgPe7PClp23wa2rgH25tDhj2Q"; // Substitua pela sua chave pública VAPID
   const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
-  registration.pushManager
-    .subscribe({
+  try {
+    const subscription = await registration.pushManager.getSubscription();
+
+    // Se o usuário já está inscrito, não precisa refazer a inscrição
+    if (subscription) {
+      const subscriptionExists = await checkSubscriptionExists(
+        subscription.endpoint
+      );
+
+      if (subscriptionExists) {
+        console.log(
+          "Assinatura já existe no banco de dados, não é necessário criar uma nova."
+        );
+        return;
+      }
+    }
+
+    // Se não houver assinatura ou se ela não existir no banco, inscreva novamente
+    const newSubscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: convertedVapidKey,
-    })
-    .then((subscription) => {
-      console.log("Usuário inscrito para notificações push:", subscription);
-
-      // Extrair chaves e codificar em base64
-      const p256dhKey = new Uint8Array(subscription.getKey("p256dh")!);
-      const authKey = new Uint8Array(subscription.getKey("auth")!);
-
-      const keys = {
-        p256dh: arrayBufferToBase64(p256dhKey),
-        auth: arrayBufferToBase64(authKey),
-      };
-
-      // Recuperar o userId de onde ele está armazenado (localStorage, ou sessionStorage)
-      const userId = getUserIdFromLocalStorage();
-
-      if (!userId) {
-        throw new Error(
-          "User ID não encontrado. O usuário precisa estar logado."
-        );
-      }
-
-      // Verificar se o userId tem o formato de ObjectId do MongoDB (24 caracteres)
-      if (!/^[a-f\d]{24}$/i.test(userId)) {
-        throw new Error(
-          "User ID inválido. Deve ser um ObjectId de 24 caracteres."
-        );
-      }
-
-      console.log(
-        "Enviando a assinatura para o servidor com o userId:",
-        userId
-      );
-      console.log("Chaves a serem enviadas:", keys);
-
-      // Envia a assinatura para o servidor
-      return fetch("https://cemear-b549eb196d7c.herokuapp.com/subscribe", {
-        method: "POST",
-        body: JSON.stringify({
-          endpoint: subscription.endpoint,
-          keys: keys,
-          userId: userId, // Inclua o userId na requisição
-        }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-    })
-    .then((response) => {
-      if (response.ok) {
-        console.log("Assinatura salva no servidor.");
-      } else {
-        console.error("Falha ao salvar assinatura no servidor.");
-      }
-    })
-    .catch((error) => {
-      console.error(
-        "Erro ao inscrever o usuário para notificações push:",
-        error
-      );
     });
+
+    console.log("Usuário inscrito para notificações push:", newSubscription);
+
+    // Extrair chaves e codificar em base64
+    const p256dhKey = new Uint8Array(newSubscription.getKey("p256dh")!);
+    const authKey = new Uint8Array(newSubscription.getKey("auth")!);
+
+    const keys = {
+      p256dh: arrayBufferToBase64(p256dhKey),
+      auth: arrayBufferToBase64(authKey),
+    };
+
+    const userId = getUserIdFromLocalStorage();
+
+    if (!userId) {
+      throw new Error(
+        "User ID não encontrado. O usuário precisa estar logado."
+      );
+    }
+
+    // Verificar se o userId tem o formato de ObjectId do MongoDB (24 caracteres)
+    if (!/^[a-f\d]{24}$/i.test(userId)) {
+      throw new Error(
+        "User ID inválido. Deve ser um ObjectId de 24 caracteres."
+      );
+    }
+
+    console.log(
+      "Enviando a nova assinatura para o servidor com o userId:",
+      userId
+    );
+
+    // Envia a assinatura para o servidor
+    await fetch("https://cemear-b549eb196d7c.herokuapp.com/subscribe", {
+      method: "POST",
+      body: JSON.stringify({
+        endpoint: newSubscription.endpoint,
+        keys: keys,
+        userId: userId, // Inclua o userId na requisição
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    console.log("Assinatura salva no servidor.");
+  } catch (error) {
+    console.error("Erro ao inscrever o usuário para notificações push:", error);
+  }
 }
 
 // Função para capturar o userId corretamente do localStorage
