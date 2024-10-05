@@ -735,9 +735,13 @@ const PostList: React.FC = () => {
                       }}
                     >
                       <SentimentVerySatisfiedSharpIcon
-                        sx={{ fontSize: 35, color: "#0B68A9" }}
+                        sx={{
+                          fontSize: 35,
+                          color: post.reactions && post.reactions.length > 0 ? "#FFB900" : "#0B68A9", // Cor condicional
+                        }}
                       />
                     </IconButton>
+
 
                     <IconButton
                       onClick={(event) => {

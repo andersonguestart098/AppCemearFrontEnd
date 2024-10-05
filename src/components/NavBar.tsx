@@ -150,13 +150,6 @@ function ResponsiveAppBar() {
 
             {/* Ícones de configuração e logout alinhados à direita */}
             <Box sx={{ display: "flex", alignItems: "center" }}>
-              <IconButton
-                onClick={handleSettingsClick}
-                sx={{ color: "white", marginRight: "16px" }}
-              >
-                <SettingsIcon />
-              </IconButton>
-
               <IconButton onClick={handleLogout} sx={{ color: "white" }}>
                 <LogoutIcon />
               </IconButton>

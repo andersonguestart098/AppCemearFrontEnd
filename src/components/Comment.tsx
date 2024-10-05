@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Popover, Typography, IconButton } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
+import ClearSharpIcon from '@mui/icons-material/ClearSharp';
 
 interface CommentListProps {
   anchorEl: HTMLElement | null;
@@ -45,9 +45,9 @@ const CommentList: React.FC<CommentListProps> = ({
                 {tipoUsuario === "admin" && ( // Condição para mostrar o botão de delete
                   <IconButton
                     onClick={() => handleDeleteComment(comment.id)}
-                    sx={{ color: "red" }}
+                    sx={{ color: "#C1C1C1" }}
                   >
-                    <DeleteIcon />
+                    <ClearSharpIcon />
                   </IconButton>
                 )}
               </Box>
