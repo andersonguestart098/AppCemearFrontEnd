@@ -71,6 +71,7 @@ const PostList: React.FC = () => {
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [reactionEmoji, setReactionEmoji] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const { tipoUsuario, setTipoUsuario } = useUserContext();
@@ -174,15 +175,26 @@ const PostList: React.FC = () => {
 
   // useEffect para buscar os posts ao carregar a página
   useEffect(() => {
+    // Pega o nome do usuário logado a partir do token JWT
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decodedToken: any = jwtDecode(token);
+        setUserName(decodedToken?.nome || "Usuário"); // Salva o nome do usuário
+      } catch (error) {
+        console.error("Erro ao decodificar token:", error);
+      }
+    }
+  
     fetchPostsWithComments(currentPage);
-
+  
     // Socket para novos posts
     socket.on("new-post", (newPost) => {
       console.log("Novo post recebido via socket:", newPost);
       setPosts((prevPosts) => [newPost, ...prevPosts]);
       handleOpenSnackbar("Novo post adicionado!", "🆕");
     });
-
+  
     // Socket para atualizações de reações
     socket.on("post-reaction-updated", (updatedPost) => {
       console.log("Reação de post atualizada via socket:", updatedPost);
@@ -195,20 +207,21 @@ const PostList: React.FC = () => {
         return updatedPosts;
       });
     });
-
+  
     // Socket para deleção de posts
     socket.on("delete-post", () => {
       console.log("Post deletado via socket");
       fetchPostsWithComments(currentPage); // Atualiza os posts após a deleção
       handleOpenSnackbar("Post deletado!", "🗑️");
     });
-
+  
     return () => {
       socket.off("new-post");
       socket.off("post-reaction-updated");
       socket.off("delete-post");
     };
   }, [currentPage, fetchPostsWithComments]);
+  
 
   // Função para abrir o Snackbar com emoji
   // Função para abrir o Snackbar com emoji opcional
@@ -641,13 +654,14 @@ const PostList: React.FC = () => {
                       </MenuItem>,
                     ]}
                   </Menu>
+                  <Typography variant="body2" sx={{ color: "#FF9D12", marginTop: "8px", fontWeight: "bold" }}>
+                  {post.user?.usuario ? `${post.user.usuario} postou` : "Usuário postou"}
 
-                  <Typography
-                    variant="h5"
-                    sx={{ fontWeight: "bold", color: "#0B68A9" }}
-                  >
-                    {post.titulo}
-                  </Typography>
+    </Typography>
+
+    <Typography variant="h5" sx={{ fontWeight: "bold", color: "#0B68A9" }}>
+      {post.titulo}
+    </Typography>
 
                   {post.imagePath && (
                     <Box sx={{ position: "relative", textAlign: "center" }}>

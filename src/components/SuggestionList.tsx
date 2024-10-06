@@ -19,7 +19,21 @@ const SuggestionList: React.FC = () => {
   useEffect(() => {
     const fetchSuggestions = async () => {
       try {
-        const response = await axios.get("/suggestions");
+        const token = localStorage.getItem("token"); // Obtém o token do localStorage
+        console.log("Token obtido do localStorage:", token); // Log do token
+
+        if (!token) {
+          throw new Error("Usuário não autenticado. Token não encontrado.");
+        }
+
+        console.log("Iniciando requisição para /suggestions com o token...");
+        const response = await axios.get("/suggestions", {
+          headers: {
+            Authorization: `Bearer ${token}`, // Adiciona o token no cabeçalho Authorization
+          },
+        });
+
+        console.log("Resposta do servidor:", response.data); // Log da resposta
         setSuggestions(response.data);
       } catch (error) {
         console.error("Erro ao buscar sugestões:", error);

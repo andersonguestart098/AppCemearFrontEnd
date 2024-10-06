@@ -53,24 +53,35 @@ const PostForm: React.FC<PostFormProps> = ({ closeModal }) => {
     }
 
     try {
-      console.log("Enviando dados:", { titulo, conteudo, image });
+      // Verifica se o token está presente antes de enviar
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error("Usuário não autenticado. Faça login para postar.");
+      }
+
+      // Enviando os dados do formulário
       await axios.post(
         "https://cemear-b549eb196d7c.herokuapp.com/posts",
         formData,
         {
           headers: {
             "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+ // Certifique-se de que o token está armazenado corretamente
           },
         }
       );
 
+      // Limpa os campos após o envio bem-sucedido
       setConteudo("");
       setTitulo("");
-      setImage(null); // Reseta a imagem após o envio
+      setImage(null);
+
+      // Fecha o modal após o envio
       closeModal();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao enviar postagem:", error);
-      setError("Ocorreu um erro ao enviar a postagem. Tente novamente.");
+      setError(error.response?.data?.error || "Ocorreu um erro ao enviar a postagem. Tente novamente.");
     } finally {
       setLoading(false);
     }
