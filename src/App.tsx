@@ -31,6 +31,7 @@ import Register from "./components/RegisterUser";
 import Groups2Icon from "@mui/icons-material/Groups2";
 import PlaylistAddCircleIcon from "@mui/icons-material/PlaylistAddCircle";
 import axios from "axios";
+import ObjectDetection from "./components/objectDetection";  // Importa o componente de detecção de objetos
 
 const baseURL = "https://cemear-b549eb196d7c.herokuapp.com";
 
@@ -68,6 +69,7 @@ const App: React.FC = () => {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [openSuggestionForm, setOpenSuggestionForm] = useState(false);
   const [openSuggestionList, setOpenSuggestionList] = useState(false);
+  const [isObjectDetectionOpen, setIsObjectDetectionOpen] = useState(false); // Estado para modal de detecção de objetos
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [suggestionData, setSuggestionData] = useState({
     nomeUsuario: "",
@@ -153,6 +155,38 @@ const App: React.FC = () => {
       }}
     >
       <NavBar />
+
+      <div
+        style={{
+          paddingTop: "40px",
+          display: "flex",
+          justifyContent: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        {/* Ícone para abrir a detecção de objetos */}
+        <IconButton
+          style={buttonStyle}
+          color="primary"
+          onClick={() => setIsObjectDetectionOpen(true)}
+        >
+          <PostAddIcon style={{ fontSize: 32 }} />
+        </IconButton>
+      </div>
+
+      {/* Modal de Detecção de Objetos */}
+      <Modal open={isObjectDetectionOpen} onClose={() => setIsObjectDetectionOpen(false)}>
+        <Box sx={style}>
+          <ObjectDetection />
+          <Button
+            variant="outlined"
+            onClick={() => setIsObjectDetectionOpen(false)}
+            style={{ marginTop: "10px" }}
+          >
+            Fechar
+          </Button>
+        </Box>
+      </Modal>
 
       <div
         style={{
@@ -322,11 +356,7 @@ const App: React.FC = () => {
         </Box>
       </Modal>
 
-      {/* Modal para formulário de sugestões */}
-      <Dialog
-        open={openSuggestionForm}
-        onClose={() => setOpenSuggestionForm(false)}
-      >
+      <Dialog open={openSuggestionForm} onClose={() => setOpenSuggestionForm(false)}>
         <DialogContent>
           <Typography variant="h6" sx={{ paddingBottom: 5, color: "#0B68A9" }}>
             Deixe sua sugestão para a empresa!
@@ -377,11 +407,7 @@ const App: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Modal para exibir sugestões (somente admin) */}
-      <Dialog
-        open={openSuggestionList}
-        onClose={() => setOpenSuggestionList(false)}
-      >
+      <Dialog open={openSuggestionList} onClose={() => setOpenSuggestionList(false)}>
         <DialogContent>
           <Typography variant="h6">Sugestões dos Colaboradores</Typography>
           {suggestions.length > 0 ? (
