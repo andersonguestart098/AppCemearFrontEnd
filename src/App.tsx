@@ -156,23 +156,7 @@ const App: React.FC = () => {
     >
       <NavBar />
 
-      <div
-        style={{
-          paddingTop: "40px",
-          display: "flex",
-          justifyContent: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        {/* Ícone para abrir a detecção de objetos */}
-        <IconButton
-          style={buttonStyle}
-          color="primary"
-          onClick={() => setIsObjectDetectionOpen(true)}
-        >
-          <PostAddIcon style={{ fontSize: 32 }} />
-        </IconButton>
-      </div>
+   
 
       {/* Modal de Detecção de Objetos */}
       <Modal open={isObjectDetectionOpen} onClose={() => setIsObjectDetectionOpen(false)}>
