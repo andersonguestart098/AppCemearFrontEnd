@@ -62,13 +62,13 @@ const buttonStyle = {
 
 const App: React.FC = () => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true); // Adicionando controle de carregamento
   const [isPostFormOpen, setIsPostFormOpen] = useState(false);
   const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
   const [isFileDownloadOpen, setIsFileDownloadOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [openSuggestionForm, setOpenSuggestionForm] = useState(false);
   const [openSuggestionList, setOpenSuggestionList] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [suggestionData, setSuggestionData] = useState({
     nomeUsuario: "",
@@ -82,18 +82,21 @@ const App: React.FC = () => {
   const [calendarType, setCalendarType] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
+    const verifyToken = async () => {
+      const token = localStorage.getItem("token");
       const storedTipoUsuario = localStorage.getItem("tipoUsuario");
 
-      if (storedTipoUsuario) {
+      if (token && storedTipoUsuario) {
         setTipoUsuario(storedTipoUsuario);
         navigate("/main");
+      } else {
+        navigate("/login");
       }
-    } else {
-      navigate("/login");
-    }
+
+      setIsLoading(false); // Finaliza o estado de carregamento
+    };
+
+    verifyToken();
   }, [navigate, setTipoUsuario]);
 
   const handleCalendarClick = (event: React.MouseEvent<HTMLElement>) => {
