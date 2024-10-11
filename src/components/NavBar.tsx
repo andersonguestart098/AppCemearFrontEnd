@@ -77,13 +77,21 @@ function ResponsiveAppBar() {
         throw new Error("Chaves de criptografia ausentes.");
       }
 
-      // Converter as chaves para base64
       const p256dhBase64 = btoa(
         String.fromCharCode(...Array.from(new Uint8Array(p256dhKey)))
       );
       const authBase64 = btoa(
         String.fromCharCode(...Array.from(new Uint8Array(authKey)))
       );
+      console.log("p256dhKey:", p256dhKey);
+      console.log("authKey:", authKey);
+      console.log("Subscription data being sent:", {
+        endpoint: subscription.endpoint,
+        keys: {
+          p256dh: p256dhBase64,
+          auth: authBase64,
+        },
+      });
 
       // Enviar a assinatura para o backend
       await axios.post(
