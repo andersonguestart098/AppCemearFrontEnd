@@ -62,13 +62,13 @@ const buttonStyle = {
 
 const App: React.FC = () => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true); // Adicionando controle de carregamento
   const [isPostFormOpen, setIsPostFormOpen] = useState(false);
   const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
   const [isFileDownloadOpen, setIsFileDownloadOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [openSuggestionForm, setOpenSuggestionForm] = useState(false);
   const [openSuggestionList, setOpenSuggestionList] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [suggestionData, setSuggestionData] = useState({
     nomeUsuario: "",
@@ -82,21 +82,29 @@ const App: React.FC = () => {
   const [calendarType, setCalendarType] = useState<string | null>(null);
 
   useEffect(() => {
-    const verifyToken = async () => {
-      const token = localStorage.getItem("token");
+    console.log("Verificando autenticação...");
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      console.log("Token encontrado:", token);
       const storedTipoUsuario = localStorage.getItem("tipoUsuario");
 
-      if (token && storedTipoUsuario) {
+      if (storedTipoUsuario) {
+        console.log("Tipo de usuário encontrado:", storedTipoUsuario);
         setTipoUsuario(storedTipoUsuario);
         navigate("/main");
       } else {
+        console.log(
+          "Tipo de usuário não encontrado, redirecionando para login."
+        );
         navigate("/login");
       }
+    } else {
+      console.log("Nenhum token encontrado, redirecionando para login.");
+      navigate("/login");
+    }
 
-      setIsLoading(false); // Finaliza o estado de carregamento
-    };
-
-    verifyToken();
+    setIsLoading(false); // Finaliza o estado de carregamento
   }, [navigate, setTipoUsuario]);
 
   const handleCalendarClick = (event: React.MouseEvent<HTMLElement>) => {
