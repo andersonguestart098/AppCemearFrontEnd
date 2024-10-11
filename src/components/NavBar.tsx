@@ -6,18 +6,17 @@ import Toolbar from "@mui/material/Toolbar";
 import Container from "@mui/material/Container";
 import IconButton from "@mui/material/IconButton";
 import LogoutIcon from "@mui/icons-material/Logout";
-import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded"; // Ícone de notificações (sininho)
+import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded";
 import CircularProgress from "@mui/material/CircularProgress";
-import Popover from "@mui/material/Popover";
-import Typography from "@mui/material/Typography";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
+import { subscribeUserToPush } from "../serviceWorkerRegistration"; // Certifique-se de usar a função de inscrição corretamente
 
 const logoSrc = "/logo.png";
 
 function ResponsiveAppBar() {
   const navigate = useNavigate();
   const [loading, setLoading] = React.useState(false);
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
 
   const handleLogout = () => {
@@ -29,55 +28,13 @@ function ResponsiveAppBar() {
     }, 1500);
   };
 
-  const handleSettingsClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
+  // Função que ativa as notificações e registra a assinatura
   const askNotificationPermission = async () => {
     try {
       const permission = await Notification.requestPermission();
       if (permission === "granted") {
         console.log("Notificações ativadas!");
-        const registration = await navigator.serviceWorker.ready;
-
-        // Registrar a assinatura no PushManager
-        const subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array("BDFt6_CYV5ca61PV7V3_ULiIjsNnikV5wxeU-4fHiFYrAeGlJ6U99C8lWSxz3aPgPe7PClp23wa2rgH25tDhj2Q"),
-        });
-
-        console.log("Assinatura de notificações obtida:", subscription);
-
-        // Extrair chaves de criptografia
-        const p256dh = subscription.getKey('p256dh');
-        const auth = subscription.getKey('auth');
-
-        // Verifique se as chaves foram geradas corretamente
-        if (!p256dh || !auth) {
-          console.error("Chaves de criptografia ausentes.");
-          return;
-        }
-
-        // Converter para Base64
-        const p256dhKey = arrayBufferToBase64(p256dh);
-        const authKey = arrayBufferToBase64(auth);
-
-        // Exibir as chaves e endpoint para debug
-        console.log("p256dhKey (Base64):", p256dhKey);
-        console.log("authKey (Base64):", authKey);
-        console.log("Endpoint:", subscription.endpoint);
-
-        // Armazenar no localStorage (opcional)
-        localStorage.setItem('subscriptionEndpoint', subscription.endpoint);
-        localStorage.setItem('subscriptionP256dh', p256dhKey);
-        localStorage.setItem('subscriptionAuth', authKey);
-
-        // Enviar a assinatura para o servidor
-        await sendSubscriptionToServer(subscription.endpoint, p256dhKey, authKey);
+        await registerPushSubscription(); // Função para registrar a assinatura no backend
       } else {
         console.log("Permissão de notificações negada.");
       }
@@ -86,25 +43,69 @@ function ResponsiveAppBar() {
     }
   };
 
-  const sendSubscriptionToServer = async (endpoint: any, p256dhKey: any, authKey: any) => {
+  // Função para registrar a assinatura no backend após a permissão
+  const registerPushSubscription = async () => {
     try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey:
+          "BDFt6_CYV5ca61PV7V3_ULiIjsNnikV5wxeU-4fHiFYrAeGlJ6U99C8lWSxz3aPgPe7PClp23wa2rgH25tDhj2Q", // Chave pública VAPID
+      });
+
       const token = localStorage.getItem("token");
       const userId = localStorage.getItem("userId");
 
       if (!token || !userId) {
-        console.error("Token ou User ID ausentes.");
+        throw new Error("Usuário não autenticado.");
+      }
+
+      // Decodificar o token JWT para verificar se está válido
+      const decodedToken = jwtDecode<any>(token);
+      if (!decodedToken || Date.now() / 1000 > decodedToken.exp) {
+        console.error("Token JWT expirado ou inválido.");
+        localStorage.removeItem("token");
+        navigate("/login");
         return;
       }
 
-      // Enviar a assinatura para o servidor
-      const response = await axios.post(
-        'https://cemear-b549eb196d7c.herokuapp.com/subscribe',
+      // Extrair chaves da assinatura
+      const p256dhKey = subscription.getKey("p256dh");
+      const authKey = subscription.getKey("auth");
+
+      if (!p256dhKey || !authKey) {
+        throw new Error("Chaves de criptografia ausentes.");
+      }
+
+      // Converter as chaves para base64
+      const p256dhBase64 = btoa(
+        String.fromCharCode(...new Uint8Array(p256dhKey))
+      );
+      const authBase64 = btoa(
+        String.fromCharCode(...new Uint8Array(authKey))
+      );
+
+      console.log("p256dhKey:", p256dhBase64);
+      console.log("authKey:", authBase64);
+      console.log("Subscription data being sent:", {
+        endpoint: subscription.endpoint,
+        keys: {
+          p256dh: p256dhBase64,
+          auth: authBase64,
+        },
+      });
+
+      // Enviar a assinatura para o backend
+      await axios.post(
+        "https://cemear-b549eb196d7c.herokuapp.com/subscribe",
         {
           userId,
-          endpoint,
-          keys: {
-            p256dh: p256dhKey,
-            auth: authKey,
+          subscription: {
+            endpoint: subscription.endpoint,
+            keys: {
+              p256dh: p256dhBase64,
+              auth: authBase64,
+            },
           },
         },
         {
@@ -114,35 +115,12 @@ function ResponsiveAppBar() {
         }
       );
 
-      console.log("Assinatura enviada com sucesso:", response.data);
+      setNotificationsEnabled(true);
+      console.log("Assinatura de notificações salva com sucesso!");
     } catch (error) {
-      console.error("Erroo ao enviar a assinatura para o servidor:", error);
+      console.error("Erro ao registrar assinatura de notificações:", error);
     }
   };
-
-  // Converter ArrayBuffer para Base64
-  function arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const binary = String.fromCharCode(...new Uint8Array(buffer));
-    return window.btoa(binary);
-  }
-
-  // Função utilitária para converter a chave VAPID de base64 para Uint8Array
-  function urlBase64ToUint8Array(base64String: string): Uint8Array {
-    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/\-/g, "+").replace(/_/g, "/");
-
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-
-    return outputArray;
-  }
-
-  const open = Boolean(anchorEl);
-  const id = open ? "simple-popover" : undefined;
 
   return (
     <>
@@ -168,8 +146,14 @@ function ResponsiveAppBar() {
               <img src={logoSrc} alt="Logo" style={{ width: 125 }} />
             </Box>
 
-            {/* Ícones de configuração e logout alinhados à direita */}
+            {/* Ícones de notificações e logout */}
             <Box sx={{ display: "flex", alignItems: "center" }}>
+              <IconButton
+                onClick={askNotificationPermission}
+                sx={{ color: notificationsEnabled ? "yellow" : "white" }}
+              >
+                <NotificationsActiveRoundedIcon />
+              </IconButton>
               <IconButton onClick={handleLogout} sx={{ color: "white" }}>
                 <LogoutIcon />
               </IconButton>
@@ -177,33 +161,6 @@ function ResponsiveAppBar() {
           </Toolbar>
         </Container>
       </AppBar>
-
-      {/* Popover de Configurações */}
-      <Popover
-        id={id}
-        open={open}
-        anchorEl={anchorEl}
-        onClose={handleClose}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "right",
-        }}
-        transformOrigin={{
-          vertical: "top",
-          horizontal: "right",
-        }}
-      >
-        <Box p={2}>
-          <Typography variant="h6">Ativar notificações</Typography>
-          {/* Ícone de sininho para notificações */}
-          <IconButton
-            onClick={askNotificationPermission}
-            sx={{ color: "#0B68A9", marginTop: "8px" }}
-          >
-            <NotificationsActiveRoundedIcon />
-          </IconButton>
-        </Box>
-      </Popover>
 
       {/* Exibir o spinner centralizado quando o estado de loading estiver ativo */}
       {loading && (

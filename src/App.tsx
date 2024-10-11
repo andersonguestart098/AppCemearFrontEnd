@@ -69,15 +69,17 @@ const App: React.FC = () => {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [openSuggestionForm, setOpenSuggestionForm] = useState(false);
   const [openSuggestionList, setOpenSuggestionList] = useState(false);
-  const [isObjectDetectionOpen, setIsObjectDetectionOpen] = useState(false);
-
   const [isLoading, setIsLoading] = useState(true);
+  
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [suggestionData, setSuggestionData] = useState({
     nomeUsuario: "",
     titulo: "",
     conteudo: "",
   });
+  
+  // Declaração para isObjectDetectionOpen e setIsObjectDetectionOpen
+  const [isObjectDetectionOpen, setIsObjectDetectionOpen] = useState(false);
 
   const { tipoUsuario, setTipoUsuario } = useUserContext();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
