@@ -40,7 +40,7 @@ const Login: React.FC = () => {
       try {
         const decodedToken = jwtDecode<any>(token); // Decodifica corretamente o token
         const currentTime = Date.now() / 1000; // Verifica o timestamp atual
-
+  
         // Se o token não estiver expirado, redireciona para a página principal
         if (decodedToken && decodedToken.exp > currentTime) {
           navigate("/main");
@@ -53,6 +53,7 @@ const Login: React.FC = () => {
       }
     }
   }, [navigate]);
+  
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,7 +208,7 @@ const Login: React.FC = () => {
 
       {/* Link para criar uma nova conta */}
       <Typography variant="body2" sx={{ marginTop: "20px" }}>
-        <a href="/main" style={{ textDecoration: "none", color: "#0079bf" }}>
+        <a href="/signup" style={{ textDecoration: "none", color: "#0079bf" }}>
           CEMEAR COMERCIO E REPRESENTACAO LTDA
         </a>
       </Typography>
