@@ -90,7 +90,7 @@ const App: React.FC = () => {
       const storedTipoUsuario = localStorage.getItem("tipoUsuario");
 
       if (storedTipoUsuario) {
-        console.log("Tipo de usuário encontrado:", storedTipoUsuario);
+        console.log("Tipo de usuário Encontrado:", storedTipoUsuario);
         setTipoUsuario(storedTipoUsuario);
         navigate("/main");
       } else {
