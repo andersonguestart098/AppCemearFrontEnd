@@ -31,7 +31,6 @@ import Register from "./components/RegisterUser";
 import Groups2Icon from "@mui/icons-material/Groups2";
 import PlaylistAddCircleIcon from "@mui/icons-material/PlaylistAddCircle";
 import axios from "axios";
-import ObjectDetection from "./components/objectDetection";  // Importa o componente de detecção de objetos
 
 const baseURL = "https://cemear-b549eb196d7c.herokuapp.com";
 
@@ -69,7 +68,7 @@ const App: React.FC = () => {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [openSuggestionForm, setOpenSuggestionForm] = useState(false);
   const [openSuggestionList, setOpenSuggestionList] = useState(false);
-  const [isObjectDetectionOpen, setIsObjectDetectionOpen] = useState(false); // Estado para modal de detecção de objetos
+  const [isLoading, setIsLoading] = useState(true);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [suggestionData, setSuggestionData] = useState({
     nomeUsuario: "",
@@ -140,10 +139,38 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    if (openSuggestionList && tipoUsuario === "admin") {
-      fetchSuggestions();
-    }
-  }, [openSuggestionList, tipoUsuario]);
+    const verifyToken = async () => {
+      const token = localStorage.getItem("token");
+      const storedTipoUsuario = localStorage.getItem("tipoUsuario");
+
+      if (token && storedTipoUsuario) {
+        setTipoUsuario(storedTipoUsuario);
+        navigate("/main");
+      } else {
+        navigate("/login");
+      }
+
+      setIsLoading(false); // Finaliza o estado de carregamento
+    };
+
+    verifyToken();
+  }, [navigate, setTipoUsuario]);
+
+  if (isLoading) {
+    // Exibe o estado de carregamento enquanto o token é verificado
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        <Typography variant="h5">Verificando autenticação...</Typography>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -155,22 +182,6 @@ const App: React.FC = () => {
       }}
     >
       <NavBar />
-
-   
-
-      {/* Modal de Detecção de Objetos */}
-      <Modal open={isObjectDetectionOpen} onClose={() => setIsObjectDetectionOpen(false)}>
-        <Box sx={style}>
-          <ObjectDetection />
-          <Button
-            variant="outlined"
-            onClick={() => setIsObjectDetectionOpen(false)}
-            style={{ marginTop: "10px" }}
-          >
-            Fechar
-          </Button>
-        </Box>
-      </Modal>
 
       <div
         style={{
@@ -340,7 +351,11 @@ const App: React.FC = () => {
         </Box>
       </Modal>
 
-      <Dialog open={openSuggestionForm} onClose={() => setOpenSuggestionForm(false)}>
+      {/* Modal para formulário de sugestões */}
+      <Dialog
+        open={openSuggestionForm}
+        onClose={() => setOpenSuggestionForm(false)}
+      >
         <DialogContent>
           <Typography variant="h6" sx={{ paddingBottom: 5, color: "#0B68A9" }}>
             Deixe sua sugestão para a empresa!
@@ -391,7 +406,11 @@ const App: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={openSuggestionList} onClose={() => setOpenSuggestionList(false)}>
+      {/* Modal para exibir sugestões (somente admin) */}
+      <Dialog
+        open={openSuggestionList}
+        onClose={() => setOpenSuggestionList(false)}
+      >
         <DialogContent>
           <Typography variant="h6">Sugestões dos Colaboradores</Typography>
           {suggestions.length > 0 ? (
