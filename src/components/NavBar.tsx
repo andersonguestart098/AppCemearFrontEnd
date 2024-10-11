@@ -6,8 +6,8 @@ import Toolbar from "@mui/material/Toolbar";
 import Container from "@mui/material/Container";
 import IconButton from "@mui/material/IconButton";
 import LogoutIcon from "@mui/icons-material/Logout";
-import SettingsIcon from "@mui/icons-material/Settings"; // Ícone de configuração
-import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded"; // Ícone de notificações (sininho)
+import SettingsIcon from "@mui/icons-material/Settings";
+import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded";
 import CircularProgress from "@mui/material/CircularProgress";
 import Popover from "@mui/material/Popover";
 import Typography from "@mui/material/Typography";
@@ -19,7 +19,6 @@ const logoSrc = "/logo.png";
 function ResponsiveAppBar() {
   const navigate = useNavigate();
   const [loading, setLoading] = React.useState(false);
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
 
   const handleLogout = () => {
@@ -29,14 +28,6 @@ function ResponsiveAppBar() {
       localStorage.removeItem("token");
       navigate("/login");
     }, 1500);
-  };
-
-  const handleSettingsClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
   };
 
   const askNotificationPermission = async () => {
@@ -86,7 +77,7 @@ function ResponsiveAppBar() {
         throw new Error("Chaves de criptografia ausentes.");
       }
 
-      // Usar Array.from() para converter Uint8Array em um array normal antes de convertê-lo para base64
+      // Converter as chaves para base64
       const p256dhBase64 = btoa(
         String.fromCharCode(...Array.from(new Uint8Array(p256dhKey)))
       );
@@ -121,9 +112,6 @@ function ResponsiveAppBar() {
     }
   };
 
-  const open = Boolean(anchorEl);
-  const id = open ? "simple-popover" : undefined;
-
   return (
     <>
       <AppBar
@@ -148,8 +136,14 @@ function ResponsiveAppBar() {
               <img src={logoSrc} alt="Logo" style={{ width: 125 }} />
             </Box>
 
-            {/* Ícones de configuração e logout alinhados à direita */}
+            {/* Ícones de notificações, logout e configuração alinhados à direita */}
             <Box sx={{ display: "flex", alignItems: "center" }}>
+              <IconButton
+                onClick={askNotificationPermission}
+                sx={{ color: "white" }}
+              >
+                <NotificationsActiveRoundedIcon />
+              </IconButton>
               <IconButton onClick={handleLogout} sx={{ color: "white" }}>
                 <LogoutIcon />
               </IconButton>
@@ -157,33 +151,6 @@ function ResponsiveAppBar() {
           </Toolbar>
         </Container>
       </AppBar>
-
-      {/* Popover de Configurações */}
-      <Popover
-        id={id}
-        open={open}
-        anchorEl={anchorEl}
-        onClose={handleClose}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "right",
-        }}
-        transformOrigin={{
-          vertical: "top",
-          horizontal: "right",
-        }}
-      >
-        <Box p={2}>
-          <Typography variant="h6">Ativar notificações</Typography>
-          {/* Ícone de sininho para notificações */}
-          <IconButton
-            onClick={askNotificationPermission}
-            sx={{ color: "#0B68A9", marginTop: "8px" }}
-          >
-            <NotificationsActiveRoundedIcon />
-          </IconButton>
-        </Box>
-      </Popover>
 
       {/* Exibir o spinner centralizado quando o estado de loading estiver ativo */}
       {loading && (

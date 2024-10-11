@@ -207,7 +207,7 @@ const Login: React.FC = () => {
 
       {/* Link para criar uma nova conta */}
       <Typography variant="body2" sx={{ marginTop: "20px" }}>
-        <a href="/signup" style={{ textDecoration: "none", color: "#0079bf" }}>
+        <a href="/main" style={{ textDecoration: "none", color: "#0079bf" }}>
           CEMEAR COMERCIO E REPRESENTACAO LTDA
         </a>
       </Typography>
