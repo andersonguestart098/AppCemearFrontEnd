@@ -31,8 +31,10 @@ import Register from "./components/RegisterUser";
 import Groups2Icon from "@mui/icons-material/Groups2";
 import PlaylistAddCircleIcon from "@mui/icons-material/PlaylistAddCircle";
 import axios from "axios";
+import YoloDetection from "./components/YoloDetectionComponent";
+import PowerBIReport from "./components/PowerBIReports";
 
-const baseURL = "https://cemear-b549eb196d7c.herokuapp.com";
+const baseURL = "https://cemear-testes-443a098c8bb8.herokuapp.com";
 
 interface Suggestion {
   nomeUsuario: string;
@@ -81,6 +83,17 @@ const App: React.FC = () => {
   const [calendarType, setCalendarType] = useState<string | null>(null);
 
   useEffect(() => {
+    const fetchPowerBIAccessToken = async () => {
+      try {
+        // Chama o endpoint no backend para obter o token de autenticação do Power BI
+        const response = await axios.get(`${baseURL}/auth/powerbi`);
+        return response.data.accessToken; // Retorna o token de acesso
+      } catch (error) {
+        console.error("Erro ao obter token de acesso do Power BI", error);
+        return null; // Retorna null em caso de erro
+      }
+    };
+
     const token = localStorage.getItem("token");
 
     if (token) {
@@ -88,10 +101,19 @@ const App: React.FC = () => {
 
       if (storedTipoUsuario) {
         setTipoUsuario(storedTipoUsuario);
-        navigate("/main");
+        // Busca o token do Power BI após autenticação
+        fetchPowerBIAccessToken().then((powerBIToken) => {
+          if (powerBIToken) {
+            // Armazena o token do Power BI no localStorage para uso futuro
+            localStorage.setItem("powerBIToken", powerBIToken);
+            navigate("/main"); // Navega para a página principal após salvar o token
+          } else {
+            console.error("Erro ao obter token do Power BI");
+          }
+        });
       }
     } else {
-      navigate("/login");
+      navigate("/login"); // Redireciona para o login se não houver token
     }
   }, [navigate, setTipoUsuario]);
 
@@ -143,6 +165,81 @@ const App: React.FC = () => {
     }
   }, [openSuggestionList, tipoUsuario]);
 
+  const reportId = "7a202127-a5d0-48b7-b256-5b5f66be4f3c";
+
+  const getPowerBIToken = async () => {
+    try {
+      console.log("Fazendo requisição para obter o token do Power BI...");
+
+      // Fazendo a requisição para o backend
+      const response = await axios.post(
+        "https://cemear-testes-443a098c8bb8.herokuapp.com/getPowerBIToken"
+      );
+
+      console.log("Resposta recebida do backend:", response);
+
+      if (response.data && response.data.token) {
+        // Armazenando o token no localStorage
+        localStorage.setItem("powerBIToken", response.data.token);
+        console.log("Token do Power BI armazenado:", response.data.token);
+
+        return response.data.token;
+      } else {
+        console.error("Erro: Token não encontrado na resposta");
+        return null;
+      }
+    } catch (error: any) {
+      console.error("Erro ao obter token do Power BI:", error);
+      if (error.response) {
+        console.error("Status do erro:", error.response.status);
+        console.error("Detalhes do erro:", error.response.data);
+      }
+      return null;
+    }
+  };
+
+  const getReports = async () => {
+    const token = await getPowerBIToken(); // Obtendo o token do Power BI
+
+    if (!token) {
+      console.error("Token inválido ou não obtido");
+      return;
+    }
+
+    try {
+      console.log("Buscando relatórios do Power BI...");
+
+      const response = await fetch(
+        "https://api.powerbi.com/v1.0/myorg/reports",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`, // Usando o token no header da requisição
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        console.error("Token inválido ou expirado. Erro 401 Unauthorized.");
+        return;
+      }
+
+      const reports = await response.json();
+      console.log("Relatórios do Power BI:", reports);
+    } catch (error: any) {
+      console.error("Erro ao buscar relatórios do Power BI:", error);
+      if (error.response) {
+        console.error("Status do erro:", error.response.status);
+        console.error("Detalhes do erro:", error.response.data);
+      }
+    }
+  };
+
+  useEffect(() => {
+    getReports(); // Chamando a função para buscar os relatórios ao montar o componente
+  }, []);
+
   return (
     <div
       style={{
@@ -164,6 +261,7 @@ const App: React.FC = () => {
       >
         {tipoUsuario === "admin" ? (
           <>
+            <PowerBIReport reportId={reportId} />
             <IconButton
               style={buttonStyle}
               color="primary"

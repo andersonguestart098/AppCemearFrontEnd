@@ -61,7 +61,7 @@ const Login: React.FC = () => {
 
     try {
       const response = await fetch(
-        "https://cemear-b549eb196d7c.herokuapp.com/auth/login",
+        "https://cemear-testes-443a098c8bb8.herokuapp.com/auth/login",
         {
           method: "POST",
           headers: {

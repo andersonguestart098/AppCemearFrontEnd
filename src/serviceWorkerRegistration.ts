@@ -49,7 +49,7 @@ async function checkSubscriptionExists(endpoint: string): Promise<boolean> {
 
   try {
     const response = await fetch(
-      `https://cemear-b549eb196d7c.herokuapp.com/checkSubscription?userId=${userId}&endpoint=${encodeURIComponent(
+      `https://cemear-testes-443a098c8bb8.herokuapp.com/checkSubscription?userId=${userId}&endpoint=${encodeURIComponent(
         endpoint
       )}`
     );
@@ -124,7 +124,7 @@ export async function subscribeUserToPush(
     );
 
     // Envia a assinatura para o servidor
-    await fetch("https://cemear-b549eb196d7c.herokuapp.com/subscribe", {
+    await fetch("https://cemear-testes-443a098c8bb8.herokuapp.com/subscribe", {
       method: "POST",
       body: JSON.stringify({
         endpoint: newSubscription.endpoint,

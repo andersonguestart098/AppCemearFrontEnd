@@ -41,7 +41,7 @@ const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
       const newBirthday = { date: date.toISOString().split("T")[0], name };
       try {
         const response = await axios.post(
-          "https://cemear-b549eb196d7c.herokuapp.com/aniversarios", // Endpoint de aniversariantes
+          "https://cemear-testes-443a098c8bb8.herokuapp.com/aniversarios", // Endpoint de aniversariantes
           newBirthday
         );
         setBirthdays([...birthdays, { ...newBirthday, id: response.data.id }]);
@@ -112,7 +112,7 @@ const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
     const fetchBirthdays = async () => {
       try {
         const response = await axios.get(
-          "https://cemear-b549eb196d7c.herokuapp.com/aniversarios"
+          "https://cemear-testes-443a098c8bb8.herokuapp.com/aniversarios"
         );
         setBirthdays(response.data);
       } catch (error) {

@@ -34,7 +34,7 @@ const RegisterUser: React.FC<RegisterUserProps> = ({ closeModal }) => {
 
     try {
       const response = await axios.post(
-        "https://cemear-b549eb196d7c.herokuapp.com/auth/register",
+        "https://cemear-testes-443a098c8bb8.herokuapp.com/auth/register",
         {
           usuario,
           password,

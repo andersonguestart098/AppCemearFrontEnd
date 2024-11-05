@@ -55,7 +55,7 @@ const PostForm: React.FC<PostFormProps> = ({ closeModal }) => {
     try {
       console.log("Enviando dados:", { titulo, conteudo, image });
       await axios.post(
-        "https://cemear-b549eb196d7c.herokuapp.com/posts",
+        "https://cemear-testes-443a098c8bb8.herokuapp.com/posts",
         formData,
         {
           headers: {

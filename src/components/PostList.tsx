@@ -41,7 +41,7 @@ import { useNavigate } from "react-router-dom";
 import { useUserContext } from "./UserContext";
 import LightbulbIcon from "@mui/icons-material/Lightbulb";
 
-const baseURL = "https://cemear-b549eb196d7c.herokuapp.com";
+const baseURL = "https://cemear-testes-443a098c8bb8.herokuapp.com";
 const socket = io(baseURL, { path: "/socket.io" });
 
 const PostList: React.FC = () => {

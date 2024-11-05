@@ -44,7 +44,7 @@ const VacationCalendar: React.FC<VacationCalendarProps> = ({
       const newVacation = { name, startDate, returnDate };
       try {
         const response = await axios.post(
-          "https://cemear-b549eb196d7c.herokuapp.com/ferias",
+          "https://cemear-testes-443a098c8bb8.herokuapp.com/ferias",
           newVacation
         );
         setVacations([...vacations, { ...newVacation, id: response.data.id }]);
@@ -128,7 +128,7 @@ const VacationCalendar: React.FC<VacationCalendarProps> = ({
     const fetchVacations = async () => {
       try {
         const response = await axios.get(
-          "https://cemear-b549eb196d7c.herokuapp.com/ferias"
+          "https://cemear-testes-443a098c8bb8.herokuapp.com/ferias"
         );
         const formattedVacations = response.data.map((vacation: any) => ({
           ...vacation,

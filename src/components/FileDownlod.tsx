@@ -43,7 +43,7 @@ const FileList: React.FC = () => {
     const fetchFiles = async () => {
       try {
         const response = await axios.get(
-          "https://cemear-b549eb196d7c.herokuapp.com/files"
+          "https://cemear-testes-443a098c8bb8.herokuapp.com/files"
         );
 
         // Ordena os arquivos pela data (createdAt) do mais recente para o mais antigo

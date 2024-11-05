@@ -39,7 +39,7 @@ const CalendarComponent: React.FC<EventCalendarProps> = ({
       const newEvent = { date: date.toISOString().split("T")[0], descricao };
       try {
         const response = await axios.post(
-          "https://cemear-b549eb196d7c.herokuapp.com/events",
+          "https://cemear-testes-443a098c8bb8.herokuapp.com/events",
           newEvent
         );
         setEvents([...events, { ...newEvent, id: response.data.id }]);
@@ -107,7 +107,7 @@ const CalendarComponent: React.FC<EventCalendarProps> = ({
     const fetchEvents = async () => {
       try {
         const response = await axios.get(
-          "https://cemear-b549eb196d7c.herokuapp.com/events"
+          "https://cemear-testes-443a098c8bb8.herokuapp.com/events"
         );
         setEvents(response.data);
       } catch (error) {
